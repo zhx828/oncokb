@@ -96,6 +96,9 @@ public class IndicatorUtils {
             Boolean isFunctionalFusion = variantConsequence != null && variantConsequence.getTerm().equals("fusion");
 
             if (isFunctionalFusion || !com.mysql.jdbc.StringUtils.isNullOrEmpty(query.getAlteration())) {
+//                if(query.getAlteration() != null && query.getAlteration().matches("fusion")) {
+//                    query.
+//                }
                 fusionGeneAltsMap = findFusionGeneAndRelevantAlts(query);
                 gene = (Gene) fusionGeneAltsMap.get("pickedGene");
                 relevantAlterations = (List<Alteration>) fusionGeneAltsMap.get("relevantAlts");
