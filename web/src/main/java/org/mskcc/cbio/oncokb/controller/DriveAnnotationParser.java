@@ -4,7 +4,6 @@
  */
 package org.mskcc.cbio.oncokb.controller;
 
-import com.google.gson.JsonArray;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -154,7 +153,7 @@ public class DriveAnnotationParser {
                 if (gene == null) {
                     System.out.println(spaceStrByNestLevel(nestLevel) + "Gene " + hugo + " is not in the released list.");
                     if (releaseGene) {
-                        gene = GeneAnnotatorMyGeneInfo2.findGeneFromCBioPortal(hugo);
+                        gene = PortalGeneService.findGene(hugo);
                         if (gene == null) {
                             System.out.println("!!!!!!!!!Could not find gene " + hugo + " either.");
                             return;

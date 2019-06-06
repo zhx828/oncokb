@@ -6,6 +6,14 @@ package org.mskcc.cbio.oncokb.importer;
 public final class GeneralImporter {
 
     public static void main(String[] args) throws Exception {
-        VariantConsequenceImporter.main(args);
+//        MetaDumpImporter.main(args);
+//        VariantConsequenceImporter.main(args);
+//        PortalAlterationImporter.main(args);
+
+        // At the moment, we should have all the genes in the database.
+        // Next step will be validating the genes and populate the gene alias list
+        UpdateGenesFromPortalImporter.main(args);
+        UpdateGeneAliasImporter.main(args);
+
     }
 }

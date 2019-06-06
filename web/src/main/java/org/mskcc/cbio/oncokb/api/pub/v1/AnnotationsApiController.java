@@ -6,7 +6,7 @@ import org.mskcc.cbio.oncokb.apiModels.annotation.*;
 import org.mskcc.cbio.oncokb.genomenexus.GNVariantAnnotationType;
 import org.mskcc.cbio.oncokb.model.*;
 import org.mskcc.cbio.oncokb.util.AlterationUtils;
-import org.mskcc.cbio.oncokb.util.GeneAnnotatorMyGeneInfo2;
+import org.mskcc.cbio.oncokb.util.PortalGeneService;
 import org.mskcc.cbio.oncokb.util.GeneUtils;
 import org.mskcc.cbio.oncokb.util.IndicatorUtils;
 import org.springframework.http.HttpStatus;
@@ -256,10 +256,10 @@ public class AnnotationsApiController {
             Gene geneB = GeneUtils.getGene(entrezGeneIdB, hugoSymbolB);
 
             if (geneA == null) {
-                geneA = GeneAnnotatorMyGeneInfo2.findGeneFromCBioPortal(entrezGeneIdA == null ? hugoSymbolA : entrezGeneIdA.toString());
+                geneA = PortalGeneService.findGene(entrezGeneIdA == null ? hugoSymbolA : entrezGeneIdA.toString());
             }
             if (geneB == null) {
-                geneB = GeneAnnotatorMyGeneInfo2.findGeneFromCBioPortal(entrezGeneIdB == null ? hugoSymbolB : entrezGeneIdB.toString());
+                geneB = PortalGeneService.findGene(entrezGeneIdB == null ? hugoSymbolB : entrezGeneIdB.toString());
             }
 
             if (geneA != null) {
