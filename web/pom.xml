@@ -22,8 +22,8 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <frontend.version>a41289995c</frontend.version>
-                <frontend.groupId>com.github.oncokb</frontend.groupId>
+                <frontend.version>572e276e58</frontend.version>
+                <frontend.groupId>com.github.zhx828</frontend.groupId>
                 <frontend.artifactId>oncokb-public</frontend.artifactId>
             </properties>
             <build>
