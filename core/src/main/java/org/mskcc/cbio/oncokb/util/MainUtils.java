@@ -51,6 +51,7 @@ public class MainUtils {
         String evidenceType, String consequence, String proteinStart, String proteinEnd,
         String geneStatus, String source, String levels) {
 
+        Query requestQuery = new Query();
         Map<String, Object> requestQueries = new HashMap<>();
 
         List<Query> queries = new ArrayList<>();
@@ -59,20 +60,12 @@ public class MainUtils {
         String[] genes = {};
 
         if (entrezGeneId != null) {
-            for (String id : entrezGeneId.trim().split("\\s*,\\s*")) {
-                Query requestQuery = new Query();
-                requestQuery.setEntrezGeneId(Integer.parseInt(id));
-                queries.add(requestQuery);
-            }
+            requestQuery.setEntrezGeneId(Integer.parseInt(entrezGeneId));
         } else if (hugoSymbol != null) {
-            for (String symbol : hugoSymbol.trim().split("\\s*,\\s*")) {
-                Query requestQuery = new Query();
-                if (symbol.equals(SpecialStrings.OTHERBIOMARKERS)) {
-                    requestQuery.setHugoSymbol(symbol);
-                } else {
-                    requestQuery.setHugoSymbol(symbol.toUpperCase());
-                }
-                queries.add(requestQuery);
+            if (hugoSymbol.equals(SpecialStrings.OTHERBIOMARKERS)) {
+                requestQuery.setHugoSymbol(hugoSymbol);
+            } else {
+                requestQuery.setHugoSymbol(hugoSymbol.toUpperCase());
             }
         }
 
@@ -89,36 +82,14 @@ public class MainUtils {
             evidenceTypes = EvidenceTypeUtils.getAllEvidenceTypes();
         }
 
-        if (alteration != null) {
-            String[] alts = alteration.trim().split("\\s*,\\s*");
-            if (queries.size() == alts.length) {
-                String[] consequences = consequence == null ? new String[0] : consequence.trim().split("\\s*,\\s*");
-                String[] proteinStarts = proteinStart == null ? new String[0] : proteinStart.trim().split("\\s*,\\s*");
-                String[] proteinEnds = proteinEnd == null ? new String[0] : proteinEnd.trim().split("\\s*,\\s*");
+        requestQuery.setAlteration(alteration);
+        requestQuery.setConsequence(consequence);
+        if (proteinStart != null)
+            requestQuery.setProteinStart(Integer.valueOf(proteinStart));
+        if (proteinEnd != null)
+            requestQuery.setProteinEnd(Integer.valueOf(proteinEnd));
 
-                for (int i = 0; i < queries.size(); i++) {
-                    queries.get(i).setAlteration(alts[i]);
-                    queries.get(i).setConsequence(consequences.length == alts.length ? consequences[i] : null);
-                    queries.get(i).setProteinStart(proteinStarts.length == alts.length ? Integer.valueOf(proteinStarts[i]) : null);
-                    queries.get(i).setProteinEnd(proteinEnds.length == alts.length ? Integer.valueOf(proteinEnds[i]) : null);
-                }
-            } else {
-                return null;
-            }
-        }
-
-        String[] tumorTypes = tumorType == null ? new String[0] : tumorType.trim().split("\\s*,\\s*");
-        if (tumorTypes.length > 0) {
-            if (tumorTypes.length == 1) {
-                for (int i = 0; i < queries.size(); i++) {
-                    queries.get(i).setTumorType(tumorTypes[0]);
-                }
-            } else if (queries.size() == tumorTypes.length) {
-                for (int i = 0; i < queries.size(); i++) {
-                    queries.get(i).setTumorType(tumorTypes[i]);
-                }
-            }
-        }
+        requestQuery.setTumorType(tumorType);
 
         if (levels != null) {
             String[] levelStrs = levels.trim().split("\\s*,\\s*");
@@ -132,6 +103,7 @@ public class MainUtils {
             levelOfEvidences = null;
         }
 
+        queries.add(requestQuery);
         requestQueries.put("queries", queries);
         requestQueries.put("evidenceTypes", evidenceTypes);
         requestQueries.put("source", source == null ? "quest" : source);
@@ -654,7 +626,7 @@ public class MainUtils {
         });
     }
 
-    public static void sortCuratedGenes(List<CuratedGene> genes){
+    public static void sortCuratedGenes(List<CuratedGene> genes) {
         Collections.sort(genes, new Comparator<CuratedGene>() {
             @Override
             public int compare(CuratedGene g1, CuratedGene g2) {
