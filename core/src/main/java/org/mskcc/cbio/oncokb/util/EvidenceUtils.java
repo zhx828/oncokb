@@ -12,6 +12,7 @@ import org.mskcc.cbio.oncokb.model.tumor_type.TumorType;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.mskcc.cbio.oncokb.model.RelevantTumorTypeDirection.DOWNWARD;
 
@@ -966,17 +967,22 @@ public class EvidenceUtils {
                 final List<LevelOfEvidence> allowedLevels = query.getLevelOfEvidences();
                 final List<TumorType> upwardTumorTypes = query.getOncoTreeTypes();
                 TumorForm tumorForm = TumorTypeUtils.checkTumorForm(new HashSet<>(upwardTumorTypes));
-                query.getEvidences().stream().forEach(evidence -> {
-                    if (evidence.getLevelOfEvidence() != null && tumorForm != null && !upwardTumorTypes.contains(evidence.getOncoTreeType())) {
-                        Evidence propagatedLevel = getPropagateEvidence(allowedLevels, evidence, tumorForm);
-                        if (propagatedLevel != null) {
-                            updatedEvidences.add(propagatedLevel);
+                if (query.getGene() == null) {
+                    // at this moment, the gene is not available, so we only return the actual curated evidences
+                    query.setEvidences(query.getEvidences().stream().filter(evidence -> upwardTumorTypes.contains(evidence.getOncoTreeType())).collect(Collectors.toList()));
+                } else {
+                    query.getEvidences().stream().forEach(evidence -> {
+                        if (evidence.getLevelOfEvidence() != null && tumorForm != null && !upwardTumorTypes.contains(evidence.getOncoTreeType())) {
+                            Evidence propagatedLevel = getPropagateEvidence(allowedLevels, evidence, tumorForm);
+                            if (propagatedLevel != null) {
+                                updatedEvidences.add(propagatedLevel);
+                            }
+                        } else {
+                            updatedEvidences.add(evidence);
                         }
-                    } else {
-                        updatedEvidences.add(evidence);
-                    }
-                });
-                query.setEvidences(new ArrayList<>(keepHighestLevelForSameTreatments(updatedEvidences, query.getExactMatchedAlteration())));
+                    });
+                    query.setEvidences(new ArrayList<>(keepHighestLevelForSameTreatments(updatedEvidences, query.getExactMatchedAlteration())));
+                }
                 evidenceQueries.add(query);
             }
         }
