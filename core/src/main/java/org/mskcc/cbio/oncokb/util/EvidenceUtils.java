@@ -7,6 +7,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.mskcc.cbio.oncokb.bo.AlterationBo;
 import org.mskcc.cbio.oncokb.bo.ArticleBo;
 import org.mskcc.cbio.oncokb.bo.EvidenceBo;
+import org.mskcc.cbio.oncokb.bo.impl.AlterationBoImpl;
 import org.mskcc.cbio.oncokb.model.*;
 import org.mskcc.cbio.oncokb.model.tumor_type.TumorType;
 
@@ -135,15 +136,19 @@ public class EvidenceUtils {
     }
 
     public static List<Evidence> getEvidence(List<Alteration> alterations, Set<EvidenceType> evidenceTypes, Set<LevelOfEvidence> levelOfEvidences) {
+        boolean includeAllAlterations = false;
         if (alterations == null) {
             if (
                 (evidenceTypes != null && evidenceTypes.size() > 0) ||
                     (levelOfEvidences != null && levelOfEvidences.size() > 0)
             ) {
+                includeAllAlterations = true;
                 alterations = new ArrayList<>(AlterationUtils.getAllAlterations());
             } else {
                 return new ArrayList<>();
             }
+        } else {
+            includeAllAlterations = alterations.size() == AlterationUtils.getAllAlterations().size();
         }
         if (evidenceTypes == null) {
             evidenceTypes = new HashSet<>();
@@ -155,10 +160,10 @@ public class EvidenceUtils {
             return new ArrayList<>();
         }
         if (evidenceTypes.size() == 0 && levelOfEvidences.size() == 0) {
-            return getEvidence(alterations);
+            return includeAllAlterations ? new ArrayList<>(CacheUtils.getAllEvidences()) : getEvidence(alterations);
         }
         if (CacheUtils.isEnabled()) {
-            List<Evidence> alterationEvidences = getAlterationEvidences(alterations);
+            List<Evidence> alterationEvidences = includeAllAlterations ? new ArrayList<>(CacheUtils.getAllEvidences()) : getAlterationEvidences(alterations);
             List<Evidence> result = new ArrayList<>();
 
             for (Evidence evidence : alterationEvidences) {
@@ -181,19 +186,27 @@ public class EvidenceUtils {
     }
 
     public static List<Evidence> getEvidence(List<Alteration> alterations, Set<EvidenceType> evidenceTypes, Set<TumorType> tumorTypes, Set<LevelOfEvidence> levelOfEvidences) {
+        boolean includeAllAlterations = false;
         if (alterations == null || alterations.size() == 0) {
             if (
                 (evidenceTypes != null && evidenceTypes.size() > 0) ||
-                (tumorTypes != null && tumorTypes.size() > 0) ||
-                (levelOfEvidences != null && levelOfEvidences.size() > 0)
+                    (tumorTypes != null && tumorTypes.size() > 0) ||
+                    (levelOfEvidences != null && levelOfEvidences.size() > 0)
             ) {
+                includeAllAlterations = true;
                 alterations = new ArrayList<>(AlterationUtils.getAllAlterations());
-            }else {
+            } else {
                 return new ArrayList<>();
             }
+        } else {
+            includeAllAlterations = alterations.size() == AlterationUtils.getAllAlterations().size();
         }
         if (evidenceTypes == null || evidenceTypes.size() == 0) {
-            return getEvidence(alterations);
+            if (includeAllAlterations) {
+                return new ArrayList<>(CacheUtils.getAllEvidences());
+            } else {
+                return getEvidence(alterations);
+            }
         }
         if (tumorTypes == null || tumorTypes.size() == 0) {
             return getEvidence(alterations, evidenceTypes, levelOfEvidences);
