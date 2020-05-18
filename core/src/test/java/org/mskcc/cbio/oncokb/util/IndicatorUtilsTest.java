@@ -11,6 +11,7 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mskcc.cbio.oncokb.Constants.MISSENSE_VARIANT;
+import static org.mskcc.cbio.oncokb.model.AlterationType.STRUCTURAL_VARIANT;
 
 /**
  * Created by Hongxin on 12/23/16.
@@ -134,6 +135,12 @@ public class IndicatorUtilsTest {
         assertEquals("The oncogenicity should not be 'Predicted Oncogenic'", "", indicatorQueryResp.getOncogenic());
         assertEquals("The variant summary is not expected.", "As of 02/01/2019, there was no available functional data about the ALK R401Q mutation.", indicatorQueryResp.getVariantSummary());
         assertEquals("The isHotspot is not false, but it should be.", Boolean.FALSE, indicatorQueryResp.getHotspot());
+
+        // When both genes have relevant alteration for a fusion, the more accurately curated should be picked up
+        query = new Query(null, null, null, "ETV6-RUNX1", null, STRUCTURAL_VARIANT.toString(), StructuralVariantType.FUSION, null, "fusion", null, null, null);
+        indicatorQueryResp = IndicatorUtils.processQuery(query, null, true, null);
+        assertTrue("The mutation effect should be switch of the function.", indicatorQueryResp.getMutationEffect() != null && indicatorQueryResp.getMutationEffect().getKnownEffect().equals(MutationEffect.LIKELY_SWITCH_OF_FUNCTION));
+
 
         // No longer test 3A. KRAS has been downgraded to level 4
 //        assertEquals("The highest sensitive level should be null, the level 3A evidence under Colorectal Cancer has been maked as NO propagation.",

@@ -837,10 +837,24 @@ public class IndicatorUtils {
             if (tmpGenes.size() > 0) {
 
                 List<Gene> hasRelevantAltsGenes = new ArrayList<>();
+                // Find the exact matched alteration first.
+                // For genes that has that particular fusion curated, we should use that information
                 for (Gene tmpGene : tmpGenes) {
-                    List<Alteration> tmpRelevantAlts = findRelevantAlts(tmpGene, query.getHugoSymbol() + " Fusion");
-                    if (tmpRelevantAlts != null && tmpRelevantAlts.size() > 0) {
+                    Alteration matchedAlteration = AlterationUtils.findAlteration(tmpGene, query.getHugoSymbol() + " Fusion");
+                    if (matchedAlteration == null) {
+                        matchedAlteration = AlterationUtils.findAlteration(tmpGene, AlterationUtils.getRevertFusionName(query.getHugoSymbol() + " Fusion"));
+                    }
+                    if (matchedAlteration != null) {
                         hasRelevantAltsGenes.add(tmpGene);
+                    }
+                }
+
+                if (hasRelevantAltsGenes.size() == 0) {
+                    for (Gene tmpGene : tmpGenes) {
+                        List<Alteration> tmpRelevantAlts = findRelevantAlts(tmpGene, query.getHugoSymbol() + " Fusion");
+                        if (tmpRelevantAlts != null && tmpRelevantAlts.size() > 0) {
+                            hasRelevantAltsGenes.add(tmpGene);
+                        }
                     }
                 }
 

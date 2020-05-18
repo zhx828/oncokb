@@ -295,7 +295,7 @@ public final class AlterationUtils {
         if (fullAlterations == null) {
             return getRevertFusions(alteration);
         } else {
-            String revertFusionAltStr = getRevertFusionName(alteration);
+            String revertFusionAltStr = getRevertFusionName(alteration.getAlteration());
             Optional<Alteration> match = fullAlterations.stream().filter(alteration1 -> alteration1.getGene().equals(alteration.getGene()) && alteration1.getAlteration().equalsIgnoreCase(revertFusionAltStr)).findFirst();
             if (match.isPresent()) {
                 return match.get();
@@ -307,15 +307,15 @@ public final class AlterationUtils {
 
     public static Alteration getRevertFusions(Alteration alteration) {
         return alterationBo.findAlteration(alteration.getGene(),
-            alteration.getAlterationType(), getRevertFusionName(alteration));
+            alteration.getAlterationType(), getRevertFusionName(alteration.getAlteration()));
     }
 
-    private static String getRevertFusionName(Alteration alteration) {
+    public static String getRevertFusionName(String fusionName) {
         String revertFusionAltStr = null;
-        if (alteration != null && alteration.getAlteration() != null
-            && isFusion(alteration.getAlteration())) {
+        if (fusionName != null
+            && isFusion(fusionName)) {
             Pattern pattern = Pattern.compile(fusionRegex);
-            Matcher matcher = pattern.matcher(alteration.getAlteration());
+            Matcher matcher = pattern.matcher(fusionName);
             if (matcher.matches() && matcher.groupCount() == 3) {
                 // Revert fusion
                 String geneA = matcher.group(2);
