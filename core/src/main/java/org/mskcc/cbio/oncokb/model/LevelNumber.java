@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
+import java.util.Objects;
 import java.util.Set;
 
 
@@ -13,6 +14,7 @@ public class LevelNumber {
 
     private Set<Gene> genes = null;
     private LevelOfEvidence level = null;
+    private LevelNumberType type;
 
     /**
      **/
@@ -25,8 +27,8 @@ public class LevelNumber {
     public void setGenes(Set<Gene> genes) {
         this.genes = genes;
     }
-    
-    
+
+
     /**
      **/
     @ApiModelProperty(value = "")
@@ -39,24 +41,27 @@ public class LevelNumber {
         this.level = level;
     }
 
+    public LevelNumberType getType() {
+        return type;
+    }
+
+    public void setType(LevelNumberType type) {
+        this.type = type;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
+        if (!(o instanceof LevelNumber)) return false;
         LevelNumber that = (LevelNumber) o;
-
-        if (genes != null ? !genes.equals(that.genes) : that.genes != null) return false;
-        if (level != that.level) return false;
-
-        return true;
+        return Objects.equals(getGenes(), that.getGenes()) &&
+            getLevel() == that.getLevel() &&
+            getType() == that.getType();
     }
 
     @Override
     public int hashCode() {
-        int result = genes != null ? genes.hashCode() : 0;
-        result = 31 * result + (level != null ? level.hashCode() : 0);
-        return result;
+        return Objects.hash(getGenes(), getLevel(), getType());
     }
 
     @Override
@@ -64,6 +69,7 @@ public class LevelNumber {
         return "LevelNumber{" +
             "genes=" + genes +
             ", level=" + level +
+            ", type=" + type +
             '}';
     }
 }

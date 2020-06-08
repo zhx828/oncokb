@@ -83,6 +83,13 @@ public class NumberUtils {
             LevelNumber levelNumber = new LevelNumber();
             levelNumber.setLevel(entry.getKey());
             levelNumber.setGenes(entry.getValue());
+            if (LevelUtils.getTherapeuticLevels().contains(entry.getKey())) {
+                levelNumber.setType(LevelNumberType.TX);
+            } else if (LevelUtils.getDiagnosticLevels().contains(entry.getKey())) {
+                levelNumber.setType(LevelNumberType.DX);
+            } else if (LevelUtils.getPrognosticLevels().contains(entry.getKey())) {
+                levelNumber.setType(LevelNumberType.PX);
+            }
             levelList.add(levelNumber);
         }
 
