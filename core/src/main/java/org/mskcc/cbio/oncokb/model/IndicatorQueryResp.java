@@ -3,6 +3,7 @@ package org.mskcc.cbio.oncokb.model;
 
 import org.mskcc.cbio.oncokb.apiModels.Implication;
 import org.mskcc.cbio.oncokb.apiModels.MutationEffectResp;
+import org.mskcc.cbio.oncokb.apiModels.SummaryType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +31,7 @@ public class IndicatorQueryResp implements java.io.Serializable {
     private String geneSummary = "";
     private String variantSummary = "";
     private String tumorTypeSummary = "";
+    private SummaryType tumorTypeSummaryType = SummaryType.GENERATED;
     private String prognosticSummary = "";
     private String diagnosticSummary = "";
     private List<Implication> diagnosticImplications;
@@ -175,6 +177,14 @@ public class IndicatorQueryResp implements java.io.Serializable {
 
     public void setTumorTypeSummary(String tumorTypeSummary) {
         this.tumorTypeSummary = tumorTypeSummary;
+    }
+
+    public SummaryType getTumorTypeSummaryType() {
+        return tumorTypeSummaryType;
+    }
+
+    public void setTumorTypeSummaryType(SummaryType tumorTypeSummaryType) {
+        this.tumorTypeSummaryType = tumorTypeSummaryType;
     }
 
     public String getPrognosticSummary() {

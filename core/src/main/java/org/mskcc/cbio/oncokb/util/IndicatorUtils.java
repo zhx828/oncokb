@@ -4,10 +4,7 @@ import com.google.common.collect.Sets;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang3.StringUtils;
-import org.mskcc.cbio.oncokb.apiModels.Citations;
-import org.mskcc.cbio.oncokb.apiModels.Implication;
-import org.mskcc.cbio.oncokb.apiModels.MutationEffectResp;
-import org.mskcc.cbio.oncokb.apiModels.NCITDrug;
+import org.mskcc.cbio.oncokb.apiModels.*;
 import org.mskcc.cbio.oncokb.model.*;
 import org.mskcc.cbio.oncokb.model.tumor_type.TumorType;
 
@@ -370,6 +367,7 @@ public class IndicatorUtils {
                         Evidence lastEditTTSummary = new Evidence();
                         lastEditTTSummary.setLastEdit(lateEdit);
                         allQueryRelatedEvidences.add(lastEditTTSummary);
+                        indicatorQuery.setTumorTypeSummaryType(SummaryType.CURATED);
                     }
                 }
             }
