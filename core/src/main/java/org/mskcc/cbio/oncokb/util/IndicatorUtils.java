@@ -9,8 +9,10 @@ import org.mskcc.cbio.oncokb.apiModels.Implication;
 import org.mskcc.cbio.oncokb.apiModels.MutationEffectResp;
 import org.mskcc.cbio.oncokb.apiModels.NCITDrug;
 import org.mskcc.cbio.oncokb.model.*;
+import org.mskcc.cbio.oncokb.model.clinicalTrialsMathcing.Tumor;
 import org.mskcc.cbio.oncokb.model.tumor_type.TumorType;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,7 +24,65 @@ import static org.mskcc.cbio.oncokb.util.LevelUtils.getTherapeuticLevelsWithPrio
 /**
  * Created by hongxinzhang on 4/5/16.
  */
+
+class HighestOncotreeMapping {
+    String hugoSymbol;
+    String alteration;
+    String oncotreeCode;
+    int evidenceId;
+    String highestOncotreeCode;
+
+    public HighestOncotreeMapping() {
+    }
+
+    public String getHugoSymbol() {
+        return hugoSymbol;
+    }
+
+    public void setHugoSymbol(String hugoSymbol) {
+        this.hugoSymbol = hugoSymbol;
+    }
+
+    public String getAlteration() {
+        return alteration;
+    }
+
+    public void setAlteration(String alteration) {
+        this.alteration = alteration;
+    }
+
+    public String getOncotreeCode() {
+        return oncotreeCode;
+    }
+
+    public void setOncotreeCode(String oncotreeCode) {
+        this.oncotreeCode = oncotreeCode;
+    }
+
+    public int getEvidenceId() {
+        return evidenceId;
+    }
+
+    public void setEvidenceId(int evidenceId) {
+        this.evidenceId = evidenceId;
+    }
+
+    public String getHighestOncotreeCode() {
+        return highestOncotreeCode;
+    }
+
+    public void setHighestOncotreeCode(String highestOncotreeCode) {
+        this.highestOncotreeCode = highestOncotreeCode;
+    }
+}
+
 public class IndicatorUtils {
+    private static List<HighestOncotreeMapping> HIGHEST_MAPPING = new ArrayList();
+
+    static {
+        HIGHEST_MAPPING = getHighestOncotreeMapping();
+    }
+
     public static IndicatorQueryResp processQuery(Query query,
                                                   Set<LevelOfEvidence> levels, Boolean highestLevelOnly,
                                                   Set<EvidenceType> evidenceTypes) {
@@ -216,7 +276,7 @@ public class IndicatorUtils {
 
             indicatorQuery.setVariantExist(matchedAlt != null);
 
-            if(matchedAlt == null) {
+            if (matchedAlt == null) {
                 matchedAlt = alteration;
             }
 
@@ -237,7 +297,7 @@ public class IndicatorUtils {
                 relevantUpwardTumorTypes = TumorTypeUtils.getMappedOncoTreeTypesBySource(query.getTumorType());
             }
 
-            relevantDownwardTumorTypes = TumorTypeUtils.findTumorTypes(query.getTumorType(), RelevantTumorTypeDirection.DOWNWARD);
+            relevantDownwardTumorTypes = TumorTypeUtils.findTumorTypes(query.getTumorType(), RelevantTumorTypeDirection.DOWNWARD, false);
 
             indicatorQuery.setVUS(isVUS(matchedAlt));
 
@@ -297,14 +357,19 @@ public class IndicatorUtils {
                 }
 
                 if (hasDiagnosticImplicationEvidence) {
+                    TumorType tumorType = TumorTypeUtils.getOncoTreeSubtypeByCode(query.getTumorType());
+
+                    if(tumorType == null) {
+                        tumorType = TumorTypeUtils.getOncoTreeSubtypeByName(query.getTumorType());
+                    }
                     List<Implication> implications = new ArrayList<>();
-                    implications.addAll(getImplications(matchedAlt, alleles, relevantAlterationsWithoutAlternativeAlleles, EvidenceType.DIAGNOSTIC_IMPLICATION, new HashSet<>(relevantDownwardTumorTypes), query.getHugoSymbol(), Collections.singleton(LevelOfEvidence.LEVEL_Dx1)));
+                    implications.addAll(getImplications(matchedAlt, alleles, relevantAlterationsWithoutAlternativeAlleles, EvidenceType.DIAGNOSTIC_IMPLICATION, tumorType, new HashSet<>(relevantDownwardTumorTypes), query.getHugoSymbol(), Collections.singleton(LevelOfEvidence.LEVEL_Dx1)));
 
                     // For Dx2 and Dx3, the logic is the same as Tx/Px
                     Set<LevelOfEvidence> levelOfEvidences = new HashSet<>();
                     levelOfEvidences.add(LevelOfEvidence.LEVEL_Dx2);
                     levelOfEvidences.add(LevelOfEvidence.LEVEL_Dx3);
-                    implications.addAll(getImplications(matchedAlt, alleles, relevantAlterationsWithoutAlternativeAlleles, EvidenceType.DIAGNOSTIC_IMPLICATION, new HashSet<>(relevantUpwardTumorTypes), query.getHugoSymbol(), levelOfEvidences));
+                    implications.addAll(getImplications(matchedAlt, alleles, relevantAlterationsWithoutAlternativeAlleles, EvidenceType.DIAGNOSTIC_IMPLICATION, tumorType, new HashSet<>(relevantUpwardTumorTypes), query.getHugoSymbol(), levelOfEvidences));
                     indicatorQuery.setDiagnosticImplications(implications);
                     if (indicatorQuery.getDiagnosticImplications().size() > 0) {
                         indicatorQuery.setHighestDiagnosticImplicationLevel(LevelUtils.getHighestDiagnosticImplicationLevel(indicatorQuery.getDiagnosticImplications().stream().map(implication -> implication.getLevelOfEvidence()).collect(Collectors.toSet())));
@@ -312,7 +377,7 @@ public class IndicatorUtils {
                 }
 
                 if (hasPrognosticImplicationEvidence) {
-                    indicatorQuery.setPrognosticImplications(getImplications(matchedAlt, alleles, relevantAlterationsWithoutAlternativeAlleles, EvidenceType.PROGNOSTIC_IMPLICATION, new HashSet<>(relevantUpwardTumorTypes), query.getHugoSymbol(), null));
+                    indicatorQuery.setPrognosticImplications(getImplications(matchedAlt, alleles, relevantAlterationsWithoutAlternativeAlleles, EvidenceType.PROGNOSTIC_IMPLICATION, null, new HashSet<>(relevantUpwardTumorTypes), query.getHugoSymbol(), null));
                     if (indicatorQuery.getPrognosticImplications().size() > 0) {
                         indicatorQuery.setHighestPrognosticImplicationLevel(LevelUtils.getHighestPrognosticImplicationLevel(indicatorQuery.getPrognosticImplications().stream().map(implication -> implication.getLevelOfEvidence()).collect(Collectors.toSet())));
                     }
@@ -493,6 +558,7 @@ public class IndicatorUtils {
             return null;
         }
         Implication implication = new Implication();
+        implication.setEvidneceId(evidence.getId());
         implication.setLevelOfEvidence(evidence.getLevelOfEvidence());
         implication.setAlterations(evidence.getAlterations().stream().map(alteration -> alteration.getName() == null ? alteration.getAlteration() : alteration.getAlteration()).collect(Collectors.toSet()));
         implication.setTumorType(evidence.getOncoTreeType());
@@ -518,7 +584,7 @@ public class IndicatorUtils {
         return implications;
     }
 
-    private static List<Implication> getImplications(Alteration matchedAlt, List<Alteration> alternativeAlleles, List<Alteration> relevantAlterations, EvidenceType evidenceType, Set<TumorType> tumorTypes, String queryHugoSymbol, Set<LevelOfEvidence> levelOfEvidences) {
+    private static List<Implication> getImplications(Alteration matchedAlt, List<Alteration> alternativeAlleles, List<Alteration> relevantAlterations, EvidenceType evidenceType,  TumorType tumorType, Set<TumorType> tumorTypes, String queryHugoSymbol, Set<LevelOfEvidence> levelOfEvidences) {
         List<Implication> implications = new ArrayList<>();
 
         // Find alteration specific evidence
@@ -548,9 +614,57 @@ public class IndicatorUtils {
                 implications.addAll(getImplicationFromEvidence(altEvis, queryHugoSymbol));
             }
         }
+
+        implications = implications.stream().filter(implication -> {
+            if (implication.getLevelOfEvidence().equals(LevelOfEvidence.LEVEL_Dx1) && tumorType != null && StringUtils.isNotEmpty(tumorType.getCode())) {
+                Optional<HighestOncotreeMapping> highestOncotreeMappingOptional = HIGHEST_MAPPING.stream().filter(mapping -> mapping.getEvidenceId() == implication.getEvidneceId()).findAny();
+                if (highestOncotreeMappingOptional.isPresent()) {
+                    List<TumorType> evidenceHighestTumorTypes = TumorTypeUtils.findTumorTypes(highestOncotreeMappingOptional.get().getHighestOncotreeCode(), RelevantTumorTypeDirection.DOWNWARD, true);
+                    List<TumorType> evidenceApplicableTumorTypes = TumorTypeUtils.findTumorTypes(implication.getTumorType().getCode(), RelevantTumorTypeDirection.UPWARD, true);
+                    Collection<TumorType> applicableTumorTypes = CollectionUtils.intersection(evidenceHighestTumorTypes, evidenceApplicableTumorTypes);
+                    return applicableTumorTypes.contains(tumorType);
+                } else {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+        }).collect(Collectors.toList());
         return filterImplication(implications);
     }
 
+
+    private static List<HighestOncotreeMapping> getHighestOncotreeMapping() {
+        System.out.println("Caching highest oncotree mapping");
+
+        List<HighestOncotreeMapping> mappings = new ArrayList<>();
+        try {
+            List<String> lines = FileUtils.readTrimedLinesStream(
+                NCITDrugUtils.class.getResourceAsStream("/data/dx1_tt_highest_map.txt"));
+
+            for (int i = 0; i < lines.size(); i++) {
+                String line = lines.get(i);
+                if (line.startsWith("#")) continue;
+
+                String[] parts = line.split("\t");
+
+                if (parts.length < 5) {
+                    System.out.println("The line does not have all elements");
+                    continue;
+                }
+                HighestOncotreeMapping mapping = new HighestOncotreeMapping();
+                mapping.setHugoSymbol(parts[0].trim());
+                mapping.setAlteration(parts[1].trim());
+                mapping.setOncotreeCode(parts[2].trim());
+                mapping.setEvidenceId(Integer.parseInt(parts[3].trim()));
+                mapping.setHighestOncotreeCode(parts[4].trim());
+                mappings.add(mapping);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return mappings;
+    }
 
     public static List<Implication> filterImplication(List<Implication> implications) {
         return implications.stream().filter(implication -> implication.getLevelOfEvidence() != null)
@@ -749,7 +863,7 @@ public class IndicatorUtils {
         return treatments;
     }
 
-    private static boolean treatmentExist(List<IndicatorQueryTreatment> treatments, LevelOfEvidence newTreatmentLevel,  List<Drug> newTreatment) {
+    private static boolean treatmentExist(List<IndicatorQueryTreatment> treatments, LevelOfEvidence newTreatmentLevel, List<Drug> newTreatment) {
         boolean exists = false;
         // Info level treatment can be included even the drug(s) is the same
         for (IndicatorQueryTreatment treatment : treatments) {
@@ -771,6 +885,7 @@ public class IndicatorUtils {
         });
         return drugsCopy.stream().map(drug -> drug.getDrugName()).collect(Collectors.joining("+"));
     }
+
     private static Boolean isVUS(Alteration alteration) {
         if (alteration == null) {
             return false;

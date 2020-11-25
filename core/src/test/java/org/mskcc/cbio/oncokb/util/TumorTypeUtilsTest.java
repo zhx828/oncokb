@@ -54,11 +54,11 @@ public class TumorTypeUtilsTest extends TestCase {
     }
 
     public void testFindTumorTypesWithDirection() throws Exception {
-        List<TumorType> tumorTypes = TumorTypeUtils.findTumorTypes("CML", RelevantTumorTypeDirection.DOWNWARD);
+        List<TumorType> tumorTypes = TumorTypeUtils.findTumorTypes("CML", RelevantTumorTypeDirection.DOWNWARD, false);
         String expectedResult = "Chronic Myelogenous Leukemia, M:Myeloproliferative Neoplasms, Chronic Myeloid Leukemia, BCR-ABL1+, M:All Liquid Tumors, M:All Tumors";
         assertEquals(expectedResult, tumorTypesToString(tumorTypes));
 
-        tumorTypes = TumorTypeUtils.findTumorTypes("", RelevantTumorTypeDirection.DOWNWARD);
+        tumorTypes = TumorTypeUtils.findTumorTypes("", RelevantTumorTypeDirection.DOWNWARD, false);
         // 864 subtypes,  117 main types, 3 special(all solid, all liquid, all tumors)
         assertEquals(984, tumorTypes.size());
     }

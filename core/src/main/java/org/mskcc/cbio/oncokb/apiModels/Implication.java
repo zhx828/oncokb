@@ -10,10 +10,19 @@ import java.util.Set;
  * Created by Hongxin Zhang on 2019-05-29.
  */
 public class Implication {
+    int evidneceId;
     LevelOfEvidence levelOfEvidence;
     Set<String> alterations = new HashSet<>();
     TumorType tumorType;
     String description = "";
+
+    public int getEvidneceId() {
+        return evidneceId;
+    }
+
+    public void setEvidneceId(int evidneceId) {
+        this.evidneceId = evidneceId;
+    }
 
     public LevelOfEvidence getLevelOfEvidence() {
         return levelOfEvidence;

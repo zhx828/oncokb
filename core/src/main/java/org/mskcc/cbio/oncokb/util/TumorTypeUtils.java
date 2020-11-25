@@ -306,15 +306,15 @@ public class TumorTypeUtils {
     }
 
     public static List<TumorType> findTumorTypes(String tumorType) {
-        return findTumorTypes(tumorType, RelevantTumorTypeDirection.UPWARD);
+        return findTumorTypes(tumorType, RelevantTumorTypeDirection.UPWARD, false);
     }
 
-    public static List<TumorType> findTumorTypes(String tumorType, RelevantTumorTypeDirection direction) {
+    public static List<TumorType> findTumorTypes(String tumorType, RelevantTumorTypeDirection direction, boolean oncotreeNodesOnly) {
         LinkedHashSet<TumorType> mappedTumorTypesFromSource = new LinkedHashSet<>();
 
         if (direction.equals(RelevantTumorTypeDirection.UPWARD)) {
             // Include exact matched tumor type
-            LinkedHashSet<TumorType> oncoTreeTypes = getOncoTreeTypesByTumorType(tumorType);
+            LinkedHashSet<TumorType> oncoTreeTypes = getOncoTreeTypesByTumorType(tumorType, !oncotreeNodesOnly);
             mappedTumorTypesFromSource.addAll(oncoTreeTypes);
 
             // Include all parent nodes
@@ -356,20 +356,21 @@ public class TumorTypeUtils {
             if (tumorTypesIncludeChildren.size() == 0) {
                 return new ArrayList<>();
             }
-            mappedTumorTypesFromSource.addAll(getAllChildrenTumorTypes(new ArrayList<>(tumorTypesIncludeChildren)));
+            mappedTumorTypesFromSource.addAll(getAllChildrenTumorTypes(new ArrayList<>(tumorTypesIncludeChildren), !oncotreeNodesOnly));
         }
 
-        // Include all solid tumors
-        if (hasSolidTumor(new HashSet<>(mappedTumorTypesFromSource))) {
-            mappedTumorTypesFromSource.add(getMappedSpecialTumor(SpecialTumorType.ALL_SOLID_TUMORS));
-        }
+        if(!oncotreeNodesOnly) {
+            // Include all solid tumors
+            if (hasSolidTumor(new HashSet<>(mappedTumorTypesFromSource))) {
+                mappedTumorTypesFromSource.add(getMappedSpecialTumor(SpecialTumorType.ALL_SOLID_TUMORS));
+            }
 
-        // Include all liquid tumors
-        if (hasLiquidTumor(new HashSet<>(mappedTumorTypesFromSource))) {
-            mappedTumorTypesFromSource.add(getMappedSpecialTumor(SpecialTumorType.ALL_LIQUID_TUMORS));
-        }
+            // Include all liquid tumors
+            if (hasLiquidTumor(new HashSet<>(mappedTumorTypesFromSource))) {
+                mappedTumorTypesFromSource.add(getMappedSpecialTumor(SpecialTumorType.ALL_LIQUID_TUMORS));
+            }
 
-        // We do not want to annotate the tumor type that we don't have any knowledge about
+            // We do not want to annotate the tumor type that we don't have any knowledge about
 //        if (mappedTumorTypesFromSource.size() == 0 && !com.mysql.jdbc.StringUtils.isNullOrEmpty(tumorType)) {
 //            // When there is no OncoTree tumor type mapped, temporary check the tumor form
 //            // TODO: need to find a way for different version of the OncoTree usage.
@@ -383,10 +384,11 @@ public class TumorTypeUtils {
 //            }
 //        }
 
-        // Include all tumors
-        TumorType allTumor = getMappedSpecialTumor(SpecialTumorType.ALL_TUMORS);
-        if (allTumor != null) {
-            mappedTumorTypesFromSource.add(allTumor);
+            // Include all tumors
+            TumorType allTumor = getMappedSpecialTumor(SpecialTumorType.ALL_TUMORS);
+            if (allTumor != null) {
+                mappedTumorTypesFromSource.add(allTumor);
+            }
         }
 
         return new ArrayList<>(new LinkedHashSet<>(mappedTumorTypesFromSource));
@@ -536,7 +538,7 @@ public class TumorTypeUtils {
         return matchedTumorTypes;
     }
 
-    private static LinkedHashSet<TumorType> getOncoTreeTypesByTumorType(String tumorType) {
+    private static LinkedHashSet<TumorType> getOncoTreeTypesByTumorType(String tumorType, boolean includesMaintype) {
         LinkedHashSet<TumorType> types = new LinkedHashSet<>();
         TumorType mapped;
 
@@ -549,20 +551,24 @@ public class TumorTypeUtils {
             mapped = getOncoTreeSubtypeByName(tumorType);
         }
 
-        if (mapped == null) {
-            mapped = getOncoTreeCancerType(tumorType);
-            if (mapped != null) {
-                types.add(mapped);
-            }
-        } else if (mapped.getMainType() != null) {
-            //Also include the cancer type into relevant types
+        if (mapped != null) {
             types.add(mapped);
-            types.add(getOncoTreeCancerType(mapped.getMainType().getName()));
+        }
+        if (includesMaintype) {
+            if (mapped == null) {
+                mapped = getOncoTreeCancerType(tumorType);
+                if (mapped != null) {
+                    types.add(mapped);
+                }
+            } else if (mapped.getMainType() != null) {
+                //Also include the cancer type into relevant types
+                types.add(getOncoTreeCancerType(mapped.getMainType().getName()));
+            }
         }
         return types;
     }
 
-    private static List<TumorType> getAllChildrenTumorTypes(List<TumorType> tumorTypes) {
+    private static List<TumorType> getAllChildrenTumorTypes(List<TumorType> tumorTypes, boolean includesMaintype) {
         List<TumorType> children = new ArrayList<>();
         for (TumorType tumorType : tumorTypes) {
             TumorType trimmedTT = new TumorType();
@@ -574,11 +580,11 @@ public class TumorTypeUtils {
             trimmedTT.setLevel(tumorType.getLevel());
             trimmedTT.setTumorForm(tumorType.getTumorForm());
             children.add(trimmedTT);
-            if (tumorType.getMainType() != null && !com.mysql.jdbc.StringUtils.isNullOrEmpty(tumorType.getMainType().getName())) {
+            if (includesMaintype && tumorType.getMainType() != null && !com.mysql.jdbc.StringUtils.isNullOrEmpty(tumorType.getMainType().getName())) {
                 children.add(getOncoTreeCancerType(tumorType.getMainType().getName()));
             }
             if (!tumorType.getChildren().isEmpty()) {
-                children.addAll(getAllChildrenTumorTypes(new ArrayList<>(tumorType.getChildren().values())));
+                children.addAll(getAllChildrenTumorTypes(new ArrayList<>(tumorType.getChildren().values()), includesMaintype));
             }
         }
         return children;

@@ -190,7 +190,7 @@ public class EvidenceUtils {
         if (query.getOncoTreeTypes() != null) {
             upwardTumorTypes.addAll(query.getOncoTreeTypes());
         }
-        downwardTumorTypes.addAll(TumorTypeUtils.findTumorTypes(query.getQuery().getTumorType(), DOWNWARD));
+        downwardTumorTypes.addAll(TumorTypeUtils.findTumorTypes(query.getQuery().getTumorType(), DOWNWARD, false));
 
         // Get all gene related evidences
         Map<Gene, Set<Evidence>> mappedEvidences =
