@@ -21,6 +21,7 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.formula.functions.T;
 import org.json.simple.parser.ParseException;
+import org.mskcc.cbio.oncokb.clinicaltrials.Status;
 import org.mskcc.cbio.oncokb.model.SpecialTumorType;
 import org.mskcc.cbio.oncokb.model.TumorType;
 import org.mskcc.cbio.oncokb.model.clinicalTrialsMathcing.Arms;
@@ -47,7 +48,7 @@ public class ClinicalTrialsUtils {
         }
         return instance;
     }
-    
+
     private static final String LOCAL_DIR = "/data/clinicalTrials/";
     private static final String MAPPING_RESULT_FILE = "result.json.gz";
     private static final String SITES_FILE = "sites.json.gz";
@@ -400,6 +401,21 @@ public class ClinicalTrialsUtils {
             trials,
             drugs
         );
-        return res;
+        return res.stream().filter(map -> acceptableStatus(map.getCurrentTrialStatus())).collect(Collectors.toList());
+    }
+
+    private boolean acceptableStatus(String statusTerm) {
+        Set<Status> acceptableStatuses = new HashSet<>();
+        acceptableStatuses.add(Status.ACTIVE);
+        acceptableStatuses.add(Status.TEM_CLOSED_ACCURAL);
+        acceptableStatuses.add(Status.ENROLLING_BY_INVITATION);
+        acceptableStatuses.add(Status.NA);
+        acceptableStatuses.add(Status.ENROLLING_BY_INVITATION);
+        acceptableStatuses.add(Status.TEM_CLOSED_ACCURAL_INTERVENTION);
+        acceptableStatuses.add(Status.IN_REVIEW);
+        acceptableStatuses.add(Status.APPROVED);
+
+        Status status = Status.getByTerm(statusTerm);
+        return status != null && acceptableStatuses.contains(status);
     }
 }
