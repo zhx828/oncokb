@@ -128,12 +128,12 @@ public class ClinicalTrialsUtils {
         return site;
     }
 
-    public List<ClinicalTrialMap> filterTrialsByTreatment(
-        List<ClinicalTrialMap> trials,
+    public Set<ClinicalTrialMap> filterTrialsByTreatment(
+        Set<ClinicalTrialMap> trials,
         String treatment
     ) {
         if (treatment != null && !treatment.isEmpty()) {
-            List<ClinicalTrialMap> res = new ArrayList<>();
+            Set<ClinicalTrialMap> res = new HashSet<>();
             Set<String> drugs = Arrays
                 .stream(treatment.split("\\+"))
                 .map(item -> item.trim().toLowerCase())
@@ -144,12 +144,12 @@ public class ClinicalTrialsUtils {
         return trials;
     }
 
-    public List<ClinicalTrialMap> filterTrialsByDrugNameOrCode(
-        List<ClinicalTrialMap> trials,
+    public Set<ClinicalTrialMap> filterTrialsByDrugNameOrCode(
+        Set<ClinicalTrialMap> trials,
         Set<String> drugs
     ) {
         if (!drugs.isEmpty()) {
-            List<ClinicalTrialMap> res = new ArrayList<>();
+            Set<ClinicalTrialMap> res = new HashSet<>();
             drugs =
                 drugs
                     .stream()
@@ -186,10 +186,10 @@ public class ClinicalTrialsUtils {
         return trials;
     }
 
-    public List<ClinicalTrialMap> filterTrialsBySpecialCancerType(
+    public Set<ClinicalTrialMap> filterTrialsBySpecialCancerType(
         SpecialTumorType specialTumorType
     ) {
-        List<ClinicalTrialMap> trials = new ArrayList<>();
+        Set<ClinicalTrialMap> trials = new HashSet<>();
         if (specialTumorType == null) return trials;
 
         TumorType matchedSpecialTumorType = TumorTypeUtils.getBySpecialTumor(
@@ -202,7 +202,7 @@ public class ClinicalTrialsUtils {
                 return getAllTrials()
                     .values()
                     .stream()
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toSet());
             case ALL_SOLID_TUMORS:
             case ALL_LIQUID_TUMORS:
                 return TumorTypeUtils
@@ -224,15 +224,15 @@ public class ClinicalTrialsUtils {
                             )
                     )
                     .flatMap(Collection::stream)
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toSet());
             default:
                 return trials;
         }
     }
 
-    public List<ClinicalTrialMap> filterTrialsByCancerType(String cancerType) {
+    public Set<ClinicalTrialMap> filterTrialsByCancerType(String cancerType) {
         Map<String, TumorMap> tumors = getAllMappingResult();
-        List<ClinicalTrialMap> trials = new ArrayList<>();
+        Set<ClinicalTrialMap> trials = new HashSet<>();
 
         Set<String> tumorCodesByMainType = new HashSet<>();
         List<TumorType> allOncoTreeSubtypes = TumorTypeUtils.getAllSubtypes();
@@ -276,20 +276,40 @@ public class ClinicalTrialsUtils {
             }
         }
 
+        // Include the trials which have been marked to apply all tumors/all solid tumors/all liquid tumors
+        TumorType matchedTumorType = TumorTypeUtils.getByName(cancerType);
+        if (matchedTumorType != null) {
+            if (TumorTypeUtils.isSolidTumor(matchedTumorType) && tumors.containsKey(SpecialTumorType.ALL_SOLID_TUMORS.getTumorType())) {
+                trials.addAll(
+                    getTrialsByIDList(tumors.get(SpecialTumorType.ALL_SOLID_TUMORS.getTumorType()).getTrials())
+                );
+            } else if (TumorTypeUtils.isLiquidTumor(matchedTumorType) && tumors.containsKey(SpecialTumorType.ALL_LIQUID_TUMORS.getTumorType())) {
+                trials.addAll(
+                    getTrialsByIDList(tumors.get(SpecialTumorType.ALL_LIQUID_TUMORS.getTumorType()).getTrials())
+                );
+            }
+        }
+
+        if (tumors.containsKey(SpecialTumorType.ALL_LIQUID_TUMORS.getTumorType())) {
+            trials.addAll(
+                getTrialsByIDList(tumors.get(SpecialTumorType.ALL_TUMORS.getTumorType()).getTrials())
+            );
+        }
+
         return trials;
     }
 
-    public List<ClinicalTrialMap> getTrialsByIDList(List<String> ids) {
+    public Set<ClinicalTrialMap> getTrialsByIDList(List<String> ids) {
         return ids
             .stream()
             .map(id -> getAllTrials().get(id))
-            .collect(Collectors.toList());
+            .collect(Collectors.toSet());
     }
 
-    public List<ClinicalTrial> replaceKeysWithSites(
-        List<ClinicalTrialMap> input
+    public Set<ClinicalTrial> replaceKeysWithSites(
+        Set<ClinicalTrialMap> input
     ) {
-        List<ClinicalTrial> res = new ArrayList<>();
+        Set<ClinicalTrial> res = new HashSet<>();
         for (ClinicalTrialMap trial : input) {
             ClinicalTrial add = new ClinicalTrial();
             add.setArms(trial.getArms());
@@ -314,14 +334,14 @@ public class ClinicalTrialsUtils {
         return res;
     }
 
-    public List<ClinicalTrialMap> filterTrialsByLocation(
-        List<ClinicalTrialMap> trials,
+    public Set<ClinicalTrialMap> filterTrialsByLocation(
+        Set<ClinicalTrialMap> trials,
         String location,
         Double distance
     ) {
         if (location != null) {
             if (distance == null) distance = 100.0;
-            List<ClinicalTrialMap> res = new ArrayList<>();
+            Set<ClinicalTrialMap> res = new HashSet<>();
             Coordinates ori = OpenStreetMapUtils
                 .getInstance()
                 .getCoordinates(location);
@@ -381,8 +401,8 @@ public class ClinicalTrialsUtils {
         return trials;
     }
 
-    public List<ClinicalTrialMap> filterTrialsByTreatmentAndLocation(
-        List<ClinicalTrialMap> trials,
+    public Set<ClinicalTrialMap> filterTrialsByTreatmentAndLocation(
+        Set<ClinicalTrialMap> trials,
         String treatment,
         String location,
         Double distance
@@ -392,16 +412,16 @@ public class ClinicalTrialsUtils {
         return trials;
     }
 
-    public List<ClinicalTrialMap> filterTrialsByTreatmentForIndicatorQueryTreatment(
+    public Set<ClinicalTrialMap> filterTrialsByTreatmentForIndicatorQueryTreatment(
         String cancerType,
         Set<String> drugs
     ) {
-        List<ClinicalTrialMap> trials = filterTrialsByCancerType(cancerType);
-        List<ClinicalTrialMap> res = filterTrialsByDrugNameOrCode(
+        Set<ClinicalTrialMap> trials = filterTrialsByCancerType(cancerType);
+        Set<ClinicalTrialMap> res = filterTrialsByDrugNameOrCode(
             trials,
             drugs
         );
-        return res.stream().filter(map -> acceptableStatus(map.getCurrentTrialStatus())).collect(Collectors.toList());
+        return res.stream().filter(map -> acceptableStatus(map.getCurrentTrialStatus())).collect(Collectors.toSet());
     }
 
     private boolean acceptableStatus(String statusTerm) {

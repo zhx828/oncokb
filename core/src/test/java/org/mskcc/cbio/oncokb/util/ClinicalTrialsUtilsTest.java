@@ -91,7 +91,7 @@ public class ClinicalTrialsUtilsTest {
 
     @Test
     public void testFilterByCancerType() {
-        List<ClinicalTrialMap> trials = ClinicalTrialsUtils
+        Set<ClinicalTrialMap> trials = ClinicalTrialsUtils
             .getInstance()
             .filterTrialsByCancerType("MEL");
         assertTrue("Filter by cancer type failed", trials.size() != 0);
@@ -99,10 +99,10 @@ public class ClinicalTrialsUtilsTest {
 
     @Test
     public void testFilterTrialsByTreatment() {
-        List<ClinicalTrialMap> trials = ClinicalTrialsUtils
+        Set<ClinicalTrialMap> trials = ClinicalTrialsUtils
             .getInstance()
             .filterTrialsByCancerType("Melanoma");
-        List<ClinicalTrialMap> res = ClinicalTrialsUtils
+        Set<ClinicalTrialMap> res = ClinicalTrialsUtils
             .getInstance()
             .filterTrialsByTreatment(trials, "Dabrafenib");
         System.out.println(res.size());
@@ -113,10 +113,10 @@ public class ClinicalTrialsUtilsTest {
     public void testFilterTrialsByDrugNameOrCode() {
         Set<String> drugs = new HashSet<>();
         drugs.add("Dabrafenib");
-        List<ClinicalTrialMap> trials = ClinicalTrialsUtils
+        Set<ClinicalTrialMap> trials = ClinicalTrialsUtils
             .getInstance()
             .filterTrialsByCancerType("Melanoma");
-        List<ClinicalTrialMap> res = ClinicalTrialsUtils
+        Set<ClinicalTrialMap> res = ClinicalTrialsUtils
             .getInstance()
             .filterTrialsByDrugNameOrCode(trials, drugs);
         assertTrue("Filter by drug name Or code failed", res.size() != 0);
@@ -124,10 +124,10 @@ public class ClinicalTrialsUtilsTest {
 
     @Test
     public void testFilterTrialsByLocation() {
-        List<ClinicalTrialMap> trials = ClinicalTrialsUtils
+        Set<ClinicalTrialMap> trials = ClinicalTrialsUtils
             .getInstance()
             .filterTrialsByCancerType("MEL");
-        List<ClinicalTrialMap> res = ClinicalTrialsUtils
+        Set<ClinicalTrialMap> res = ClinicalTrialsUtils
             .getInstance()
             .filterTrialsByLocation(
                 trials,
@@ -139,7 +139,7 @@ public class ClinicalTrialsUtilsTest {
 
     @Test
     public void testReplaceKeysWithSites(){
-        List<ClinicalTrialMap> trials = ClinicalTrialsUtils
+        Set<ClinicalTrialMap> trials = ClinicalTrialsUtils
             .getInstance()
             .filterTrialsByCancerType("Melanoma");
         trials =
@@ -151,13 +151,13 @@ public class ClinicalTrialsUtilsTest {
                     "St. Louis, MO, United States",
                     100.0
                 );
-        List<ClinicalTrial> res = ClinicalTrialsUtils.getInstance().replaceKeysWithSites(trials);
+        Set<ClinicalTrial> res = ClinicalTrialsUtils.getInstance().replaceKeysWithSites(trials);
         assertTrue("Sites replace failed", res.size() != 0);
     }
 
     @Test
     public void testFilterTrialsByTreatmentAndLocation() {
-        List<ClinicalTrialMap> trials = ClinicalTrialsUtils
+        Set<ClinicalTrialMap> trials = ClinicalTrialsUtils
             .getInstance()
             .filterTrialsByCancerType("Melanoma");
         trials =

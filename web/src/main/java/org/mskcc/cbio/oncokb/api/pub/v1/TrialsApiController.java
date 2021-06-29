@@ -75,18 +75,20 @@ public class TrialsApiController {
         if (tumors.containsKey(oncoTreeCode)) {
             tumor = tumors.get(oncoTreeCode);
             if (treatment == null) {
-                return new ResponseEntity<List<ClinicalTrial>>(
-                    ClinicalTrialsUtils
-                        .getInstance()
-                        .replaceKeysWithSites(
-                            ClinicalTrialsUtils
-                                .getInstance()
-                                .getTrialsByIDList(tumor.getTrials())
-                        ),
+                return new ResponseEntity<>(
+                    new ArrayList<>(
+                        ClinicalTrialsUtils
+                            .getInstance()
+                            .replaceKeysWithSites(
+                                ClinicalTrialsUtils
+                                    .getInstance()
+                                    .getTrialsByIDList(tumor.getTrials())
+                            )
+                    ),
                     status
                 );
             }
-            List<ClinicalTrialMap> trial = ClinicalTrialsUtils
+            Set<ClinicalTrialMap> trial = ClinicalTrialsUtils
                 .getInstance()
                 .filterTrialsByTreatment(
                     ClinicalTrialsUtils
@@ -94,8 +96,10 @@ public class TrialsApiController {
                         .getTrialsByIDList(tumor.getTrials()),
                     treatment
                 );
-            return new ResponseEntity<List<ClinicalTrial>>(
-                ClinicalTrialsUtils.getInstance().replaceKeysWithSites(trial),
+            return new ResponseEntity<>(
+                new ArrayList<>(
+                    ClinicalTrialsUtils.getInstance().replaceKeysWithSites(trial)
+                ),
                 status
             );
         }
@@ -150,7 +154,7 @@ public class TrialsApiController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         HttpStatus status = HttpStatus.OK;
-        List<ClinicalTrialMap> result = new ArrayList<>();
+        Set<ClinicalTrialMap> result = new HashSet<>();
 
         if (treatment != null && treatment.indexOf(",") != -1) {
             status = HttpStatus.BAD_REQUEST;
@@ -195,13 +199,15 @@ public class TrialsApiController {
                         distance
                     );
             return new ResponseEntity<>(
-                ClinicalTrialsUtils.getInstance().replaceKeysWithSites(result),
+                new ArrayList<>(
+                    ClinicalTrialsUtils.getInstance().replaceKeysWithSites(result)
+                ),
                 status
             );
         }
 
         Set<String> nctIDSet = new HashSet<>();
-        List<ClinicalTrialMap> trials = new ArrayList<>();
+        Set<ClinicalTrialMap> trials = new HashSet<>();
         SpecialTumorType specialTumorType = null;
         try {
             specialTumorType = SpecialTumorType.valueOf(cancerType);
@@ -233,7 +239,9 @@ public class TrialsApiController {
                     distance
                 );
         return new ResponseEntity<>(
-            ClinicalTrialsUtils.getInstance().replaceKeysWithSites(result),
+            new ArrayList<>(
+                ClinicalTrialsUtils.getInstance().replaceKeysWithSites(result)
+            ),
             status
         );
     }
