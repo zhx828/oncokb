@@ -16,8 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.springframework.util.MimeTypeUtils.TEXT_PLAIN_VALUE;
-
 /**
  * Created by Hongxin on 12/12/16.
  */
@@ -214,7 +212,7 @@ public interface PrivateUtilsApi {
     @ApiResponses(value = {
         @ApiResponse(code = 200, message = "OK")})
     @RequestMapping(value = "/utils/validateTranscriptUpdate",
-        produces = TEXT_PLAIN_VALUE,
+        produces = {"text/plain"},
         method = RequestMethod.GET)
     ResponseEntity<String> utilValidateTranscriptUpdateGet(
         @ApiParam(value = "hugoSymbol") @RequestParam(value = "hugoSymbol", required = false) String hugoSymbol
@@ -240,7 +238,7 @@ public interface PrivateUtilsApi {
         @ApiResponse(code = 503, message = "Service Unavailable")
     })
     @RequestMapping(value = "/utils/data/readme",
-        produces = TEXT_PLAIN_VALUE,
+        produces = {"text/plain"},
         method = RequestMethod.GET)
     ResponseEntity<String> utilDataReadmeGet(
         @ApiParam(value = "version", required = true) @RequestParam(value = "version") String version
