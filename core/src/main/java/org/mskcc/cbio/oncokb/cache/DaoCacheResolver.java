@@ -10,17 +10,17 @@ import java.util.Collection;
 
 import static org.mskcc.cbio.oncokb.cache.Constants.DELIMITER;
 
-public class GeneralCacheResolver implements CacheResolver {
+public class DaoCacheResolver implements CacheResolver {
     private final CacheManager cacheManager;
 
-    public GeneralCacheResolver(CacheManager cacheManager) {
+    public DaoCacheResolver(CacheManager cacheManager) {
         this.cacheManager = cacheManager;
     }
 
     @Override
     public Collection<? extends Cache> resolveCaches(CacheOperationInvocationContext<?> context) {
         Collection<Cache> caches = new ArrayList<>();
-        CacheKey nameKey = CacheKey.getByKey(CacheKeyType.GENERAL.name() + DELIMITER + context.getMethod().getName());
+        CacheKey nameKey = CacheKey.getByKey(CacheKeyType.DAO.name() + DELIMITER + context.getMethod().getName());
         if (nameKey != null) {
             caches.add(cacheManager.getCache(nameKey.getKey()));
         }

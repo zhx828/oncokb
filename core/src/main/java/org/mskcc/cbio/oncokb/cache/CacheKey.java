@@ -2,15 +2,17 @@ package org.mskcc.cbio.oncokb.cache;
 
 
 public enum CacheKey {
-    CANCER_GENE_LIST("getCancerGenes"),
-    CANCER_GENE_LIST_TXT("getCancerGenesTxt"),
-    CURATED_GENE_LIST("getCuratedGenes"),
-    CURATED_GENE_LIST_TXT("getCuratedGenesTxt"),
-    FIND_GENE_BY_SYMBOL("findGeneBySymbol"),
-    PROCESS_QUERY("processQuery"),
-    GET_ALTERATION_FROM_GN("getAlterationFromGenomeNexus"),
-    GET_ALL_FDA_ALTERATIONS("getAllFdaAlterations"),
-    ONCOKB_INFO("getOncoKBInfo");
+    CANCER_GENE_LIST("general:getCancerGenes"),
+    CANCER_GENE_LIST_TXT("general:getCancerGenesTxt"),
+    CURATED_GENE_LIST("general:getCuratedGenes"),
+    CURATED_GENE_LIST_TXT("general:getCuratedGenesTxt"),
+    FIND_GENE_BY_SYMBOL("general:findGeneBySymbol"),
+    PROCESS_QUERY("general:processQuery"),
+    GET_ALTERATION_FROM_GN("general:getAlterationFromGenomeNexus"),
+    GET_ALL_FDA_ALTERATIONS("general:getAllFdaAlterations"),
+    ONCOKB_INFO("general:getOncoKBInfo"),
+    DAO_EVIDENCES_BY_GENE("dao:get")
+    ;
 
     String key;
 

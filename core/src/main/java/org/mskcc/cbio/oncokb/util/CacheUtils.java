@@ -45,7 +45,6 @@ public class CacheUtils {
     private static Map<Integer, Set<Alteration>> alterations = new HashMap<>(); //Gene based alterations
     private static Map<Integer, Set<Alteration>> VUS = new HashMap<>(); //Gene based VUSs
 
-    private static List<TumorType> cancerTypes = new ArrayList<>();
     private static Set<TumorType> specialCancerTypes = new HashSet<>();
 
     // Other services which will be defined in the property cache.update separated by comma
@@ -198,13 +197,6 @@ public class CacheUtils {
             }
             System.out.println("Cached all VUSs: " + MainUtils.getTimestampDiff(current) + " at " + MainUtils.getCurrentTime());
             current = MainUtils.getCurrentTimestamp();
-
-            cancerTypes = ApplicationContextSingleton.getTumorTypeBo().findAll();
-            System.out.println("Cached all tumor types: " + MainUtils.getTimestampDiff(current) + " at " + MainUtils.getCurrentTime());
-            current = MainUtils.getCurrentTimestamp();
-
-            System.out.println("Cached all special tumor types: " + MainUtils.getTimestampDiff(current) + " at " + MainUtils.getCurrentTime());
-            specialCancerTypes = Arrays.stream(SpecialTumorType.values()).map(specialTumorType -> cancerTypes.stream().filter(cancerType -> !StringUtils.isNullOrEmpty(cancerType.getMainType()) && cancerType.getMainType().equals(specialTumorType.getTumorType())).findAny().orElse(null)).filter(cancerType -> cancerType != null).collect(Collectors.toSet());
 
             NamingUtils.cacheAllAbbreviations();
             System.out.println("Cached abbreviation ontology: " + MainUtils.getTimestampDiff(current) + " at " + MainUtils.getCurrentTime());
@@ -526,18 +518,6 @@ public class CacheUtils {
                 }
             }
         }
-    }
-
-    public static TumorType findTumorTypeByCode(String code) {
-        return cancerTypes.stream().filter(cancerType -> !StringUtils.isNullOrEmpty(cancerType.getCode()) && cancerType.getCode().equals(code)).findFirst().orElse(null);
-    }
-
-    public static List<TumorType> getAllCancerTypes() {
-        return cancerTypes.stream().collect(Collectors.toList());
-    }
-
-    public static Set<TumorType> getAllSpecialCancerTypes() {
-        return specialCancerTypes;
     }
 
     public static void forceUpdateGeneAlterations(Integer entrezGeneId) {

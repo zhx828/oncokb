@@ -71,6 +71,13 @@ public class CacheConfiguration {
     }
 
     @Bean
+    public CacheResolver daoCacheResolver(
+        CacheManager cm
+    ) {
+        return new DaoCacheResolver(cm);
+    }
+
+    @Bean
     public KeyGenerator concatKeyGenerator(){
         return new ConcatGenerator();
     }
