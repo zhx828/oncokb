@@ -6,12 +6,16 @@ import org.mskcc.cbio.oncokb.apiModels.AnnotatedVariant;
 import org.mskcc.cbio.oncokb.apiModels.CuratedGene;
 import org.mskcc.cbio.oncokb.config.annotation.PremiumPublicApi;
 import org.mskcc.cbio.oncokb.config.annotation.PublicApi;
+import org.mskcc.cbio.oncokb.model.Alteration;
 import org.mskcc.cbio.oncokb.model.CancerGene;
+import org.mskcc.cbio.oncokb.util.EnrichedHotspot;
+import org.oncokb.oncokb_transcript.ApiException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.io.IOException;
 import java.util.List;
 
 import static org.mskcc.cbio.oncokb.api.pub.v1.Constants.INCLUDE_EVIDENCE;
@@ -37,6 +41,18 @@ public interface UtilsApi {
     ResponseEntity<List<AnnotatedVariant>> utilsAllAnnotatedVariantsGet(
         @ApiParam(value = VERSION) @RequestParam(value = "version", required = false) String version
     );
+
+    @PublicApi
+    @PremiumPublicApi
+    @ApiOperation(value = "", notes = "Get All Annotated Alterations.", response = Alteration.class, responseContainer = "List", tags = {"Variants"})
+    @ApiResponses(value = {
+        @ApiResponse(code = 200, message = "OK", response = Alteration.class, responseContainer = "List"),
+        @ApiResponse(code = 404, message = "Not Found"),
+        @ApiResponse(code = 503, message = "Service Unavailable")
+    })
+    @RequestMapping(value = "/utils/allAnnotatedAlterations", produces = {"application/json"},
+        method = RequestMethod.GET)
+    ResponseEntity<List<Alteration>> utilsAllAnnotatedAlterationsGet();
 
     @PremiumPublicApi
     @ApiOperation(value = "", notes = "Get All Annotated Variants in text file.", tags = {"Variants"})
@@ -141,4 +157,11 @@ public interface UtilsApi {
         @ApiParam(value = VERSION) @RequestParam(value = "version", required = false) String version
         , @ApiParam(value = INCLUDE_EVIDENCE, defaultValue = "TRUE") @RequestParam(value = "includeEvidence", required = false, defaultValue = "TRUE") Boolean includeEvidence
     );
+
+    @PublicApi
+    @PremiumPublicApi
+    @RequestMapping(value = "/utils/allHotspots",
+        produces = {"application/json"},
+        method = RequestMethod.GET)
+    ResponseEntity<List<EnrichedHotspot>> utilsAllHotspotGet();
 }

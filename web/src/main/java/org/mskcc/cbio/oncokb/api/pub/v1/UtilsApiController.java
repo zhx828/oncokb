@@ -1,6 +1,7 @@
 package org.mskcc.cbio.oncokb.api.pub.v1;
 
 import io.swagger.annotations.ApiParam;
+import org.apache.commons.lang.StringUtils;
 import org.mskcc.cbio.oncokb.apiModels.ActionableGene;
 import org.mskcc.cbio.oncokb.apiModels.AnnotatedVariant;
 import org.mskcc.cbio.oncokb.apiModels.CuratedGene;
@@ -274,6 +275,25 @@ public class UtilsApiController implements UtilsApi {
             return getDataDownloadResponseEntity(version, FileName.ALL_CURATED_GENES, FileExtension.TEXT);
         }
         return new ResponseEntity<>(this.cacheFetcher.getCuratedGenesTxt(includeEvidence), HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<List<Alteration>> utilsAllAnnotatedAlterationsGet(
+    ) {
+        Set<Evidence> evidences = EvidenceUtils.getEvidenceByEvidenceTypesAndLevels(Collections.singleton(EvidenceType.ONCOGENIC), null);
+        evidences = evidences.stream().filter(evidence -> StringUtils.isNotEmpty(evidence.getKnownEffect()) && MainUtils.isOncogenic(Oncogenicity.getByEffect(evidence.getKnownEffect()))).collect(Collectors.toSet());
+        Set<Alteration> alterations = new HashSet<>();
+        for (Evidence evidence : evidences) {
+            alterations.addAll(evidence.getAlterations());
+        }
+        return new ResponseEntity<>(AlterationUtils.excludeVUS(new ArrayList<>(alterations)), HttpStatus.OK);
+    }
+
+
+
+    @Override
+    public ResponseEntity<List<EnrichedHotspot>> utilsAllHotspotGet() {
+        return new ResponseEntity<>(HotspotUtils.getAllHotspots(), HttpStatus.OK);
     }
 
 }

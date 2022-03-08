@@ -24,44 +24,6 @@ import static org.mskcc.cbio.oncokb.util.VariantConsequenceUtils.toGNMutationTyp
  * Created by Hongxin on 11/03/16.
  */
 
-class EnrichedHotspot extends Hotspot {
-    Integer start;
-    Integer end;
-
-    public EnrichedHotspot(Hotspot hotspot) {
-        this.setHugoSymbol(hotspot.getHugoSymbol());
-        this.setType(hotspot.getType());
-        this.setResidue(hotspot.getResidue());
-        this.setTranscriptId(hotspot.getTranscriptId());
-        this.setInframeCount(hotspot.getInframeCount());
-        this.setTumorCount(hotspot.getTumorCount());
-        this.setTruncatingCount(hotspot.getTruncatingCount());
-        this.setSpliceCount(hotspot.getSpliceCount());
-
-        // Protein location
-        IntegerRange integerRange = extractProteinPos(this.getResidue());
-        this.setStart(integerRange.getStart());
-        this.setEnd(integerRange.getEnd());
-    }
-
-
-    public Integer getStart() {
-        return start;
-    }
-
-    public void setStart(Integer start) {
-        this.start = start;
-    }
-
-    public Integer getEnd() {
-        return end;
-    }
-
-    public void setEnd(Integer end) {
-        this.end = end;
-    }
-}
-
 public class HotspotUtils {
     private static final String HOTSPOT_FILE_PATH = "/data/cancer-hotspots-gn.json";
     private static Map<Gene, List<EnrichedHotspot>> hotspotMutations = new HashMap<>();
@@ -171,6 +133,14 @@ public class HotspotUtils {
         }
 
         return result;
+    }
+
+    public static List<EnrichedHotspot> getAllHotspots() {
+        List<EnrichedHotspot> allHotspots = new ArrayList<>();
+        for (Map.Entry<Gene, List<EnrichedHotspot>> entry : hotspotMutations.entrySet()) {
+            allHotspots.addAll(entry.getValue());
+        }
+        return allHotspots;
     }
 
     public static IntegerRange extractProteinPos(String proteinChange) {
