@@ -9,6 +9,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static org.mskcc.cbio.oncokb.Constants.IN_FRAME_DELETION;
 import static org.mskcc.cbio.oncokb.Constants.IN_FRAME_INSERTION;
@@ -290,6 +291,10 @@ public class SummaryUtils {
             }
         }
 
+        if (AlterationUtils.isRangeInframeAlteration(alteration)) {
+            return getInframeIndelUnknownSummary(query.getReferenceGenome(), alteration);
+        }
+
         if (oncogenic == null || oncogenic.equals(Oncogenicity.UNKNOWN)) {
             // Get oncogenic summary from alternative alleles
             List<Alteration> alternativeAlleles = AlterationUtils.getAlleleAlterations(query.getReferenceGenome(), alteration);
@@ -342,6 +347,44 @@ public class SummaryUtils {
         return summary;
     }
 
+    private static String getInframeIndelName(Alteration alteration) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(alteration.getGene().getHugoSymbol());
+        if (alteration.getAlteration().equals(alteration.getName())) {
+            sb.append(" in-frame ");
+            sb.append(VariantConsequenceUtils.findVariantConsequenceByTerm(IN_FRAME_DELETION).equals(alteration.getConsequence()) ? "deletions" : "insertions");
+        } else {
+            sb.append(" " + alteration.getName().toLowerCase());
+        }
+        return sb.toString();
+    }
+
+    private static String getInframeIndelNameWithRange(Alteration alteration) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(getInframeIndelName(alteration));
+        sb.append(" occurring between amino acids " + alteration.getProteinStart() + " and " + alteration.getProteinEnd() + " (" + alteration.getName() + ")");
+        return sb.toString();
+    }
+
+    private static String getInframeIndelUnknownSummary(ReferenceGenome referenceGenome, Alteration alteration) {
+        StringBuilder sb = new StringBuilder();
+        Set<Alteration> overlapAlts = AlterationUtils.findOverlapAlteration(AlterationUtils.getAllAlterations(referenceGenome, alteration.getGene()), alteration.getGene(), referenceGenome, alteration.getConsequence(), alteration.getProteinStart(), alteration.getProteinEnd(), alteration.getAlteration());
+        if (overlapAlts.size() > 0) {
+            sb.append("Biological and oncogenic effects are curated for ");
+            if (overlapAlts.size() > 3) {
+                sb.append(overlapAlts.size() + " ");
+                sb.append(getInframeIndelNameWithRange(alteration));
+            } else {
+                sb.append("the following " + getInframeIndelNameWithRange(alteration) + ": ");
+                sb.append(MainUtils.listToString(overlapAlts.stream().map(alt -> alt.getAlteration()).collect(Collectors.toList()), ", "));
+            }
+        } else {
+            sb.append("The biologic significance of " + getInframeIndelNameWithRange(alteration) + " are unknown");
+        }
+        sb.append(".");
+        return sb.toString();
+    }
+
     private static String getVUSOncogenicSummary(ReferenceGenome referenceGenome, Alteration alteration, Query query) {
         List<Evidence> evidences = EvidenceUtils.getEvidence(Collections.singletonList(alteration), Collections.singleton(EvidenceType.VUS), null);
         StringBuilder sb = new StringBuilder();
@@ -373,12 +416,16 @@ public class SummaryUtils {
     private static String getOncogenicSummaryFromOncogenicity(Oncogenicity oncogenicity, Alteration alteration, Query query) {
         StringBuilder sb = new StringBuilder();
         String queryAlteration = query.getAlteration();
-        String altName = getGeneMutationNameInVariantSummary(alteration.getGene(), query.getReferenceGenome(), query.getHugoSymbol(), queryAlteration);
+        String altName = getGeneMutationNameInVariantSummary(alteration.getGene(), query.getReferenceGenome(), query.getHugoSymbol(), alteration.getName());
         Boolean appendThe = appendThe(queryAlteration);
         Boolean isPlural = false;
 
         if (queryAlteration.toLowerCase().contains("fusions") || queryAlteration.toLowerCase().endsWith("mutations")) {
             isPlural = true;
+        }
+        if (AlterationUtils.isRangeInframeAlteration(alteration)) {
+            isPlural = true;
+            appendThe = false;
         }
         if (oncogenicity != null) {
             if (query.getAlteration().toLowerCase().contains("truncating mutation") && query.getSvType() != null) {
@@ -539,6 +586,11 @@ public class SummaryUtils {
     }
     public static String hotspotSummary(Alteration alteration, Query query, Boolean usePronoun, boolean isPositionalVariant) {
         StringBuilder sb = new StringBuilder();
+        if (AlterationUtils.isRangeInframeAlteration(alteration)) {
+            sb.append(getInframeIndelNameWithRange(alteration));
+            sb.append(" have been identified as statistically significant hotspots and are considered likely oncogenic.");
+            return sb.toString();
+        }
         if (usePronoun == null) {
             usePronoun = false;
         }
@@ -722,6 +774,8 @@ public class SummaryUtils {
         } else if (StringUtils.containsIgnoreCase(queryAlteration, "fusion")) {
             queryAlteration = queryAlteration.replace("Fusion", "fusion");
             sb.append(queryAlteration);
+        } else if(AlterationUtils.isRangeInframeAlteration(alteration)) {
+            sb.append(getInframeIndelName(alteration));
         } else if (AlterationUtils.isGeneralAlterations(queryAlteration, false)
             || (alteration.getConsequence() != null
             && (alteration.getConsequence().getTerm().equals(IN_FRAME_DELETION)
