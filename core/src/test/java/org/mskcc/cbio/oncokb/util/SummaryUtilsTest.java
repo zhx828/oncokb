@@ -8,6 +8,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.mskcc.cbio.oncokb.Constants.DEFAULT_REFERENCE_GENOME;
+import static org.mskcc.cbio.oncokb.util.SummaryUtils.lowerCaseName;
 
 /**
  * Created by Hongxin on 12/5/16.
@@ -42,9 +43,22 @@ public class SummaryUtilsTest {
 
 
     @Test
+    public void testLowerCaseName() throws Exception {
+        assertEquals("C-terminal domain", lowerCaseName("C-terminal domain"));
+        assertEquals("C-terminal domain", lowerCaseName("C-Terminal Domain"));
+        assertEquals("C-terminal domain(CTD)", lowerCaseName("C-terminal domain(CTD)"));
+        assertEquals("C", lowerCaseName("C"));
+        assertEquals("", lowerCaseName(""));
+    }
+
+
+    @Test
     public void testRangeInframeMutationSummary() throws Exception {
         // has curated oncogenicity
         assertEquals("EGFR exon 20 insertions are likely oncogenic.", getVariantSummary("EGFR", "762_823ins"));
+
+        // has curated oncogenicity
+        assertEquals("PDGFRA in-frame deletions occurring between amino acids 311 and 848 (311_848del) are likely oncogenic.", getVariantSummary("PDGFRA", "311_848del"));
 
         // hotspot
         assertEquals("EGFR in-frame deletions occurring between amino acids 745 and 759 (745_759del) have been identified as statistically significant hotspots and are considered likely oncogenic.", getVariantSummary("EGFR", "745_759del"));
@@ -53,7 +67,7 @@ public class SummaryUtilsTest {
         assertEquals("The biologic significance of EGFR in-frame deletions occurring between amino acids 1 and 10 (1_10del) are unknown.", getVariantSummary("EGFR", "1_10del"));
 
         // unknown with curated in-frame indel
-        assertEquals("Biological and oncogenic effects are curated for the following EGFR in-frame deletions occurring between amino acids 708 and 710 (708_710del): E709_T710delinsG, E709_T710delinsD.", getVariantSummary("EGFR", "708_710del"));
+        assertEquals("Biological and oncogenic effects are curated for the following EGFR in-frame deletions occurring between amino acids 708 and 710 (708_710del): E709_T710delinsD and E709_T710delinsG.", getVariantSummary("EGFR", "708_710del"));
 
         // unknown with curated in-frame indel more than 5
         assertEquals("Biological and oncogenic effects are curated for 34 EGFR in-frame deletions occurring between amino acids 1 and 1000 (1_1000del).", getVariantSummary("EGFR", "1_1000del"));

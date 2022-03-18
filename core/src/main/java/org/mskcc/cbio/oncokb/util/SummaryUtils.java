@@ -11,8 +11,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static org.mskcc.cbio.oncokb.Constants.IN_FRAME_DELETION;
-import static org.mskcc.cbio.oncokb.Constants.IN_FRAME_INSERTION;
+import static org.mskcc.cbio.oncokb.Constants.*;
 
 /**
  * Created by Hongxin on 8/10/15.
@@ -376,7 +375,7 @@ public class SummaryUtils {
                 sb.append(getInframeIndelNameWithRange(alteration));
             } else {
                 sb.append("the following " + getInframeIndelNameWithRange(alteration) + ": ");
-                sb.append(MainUtils.listToString(overlapAlts.stream().map(alt -> alt.getAlteration()).collect(Collectors.toList()), ", "));
+                sb.append(allelesToStr(overlapAlts));
             }
         } else {
             sb.append("The biologic significance of " + getInframeIndelNameWithRange(alteration) + " are unknown");
@@ -416,7 +415,6 @@ public class SummaryUtils {
     private static String getOncogenicSummaryFromOncogenicity(Oncogenicity oncogenicity, Alteration alteration, Query query) {
         StringBuilder sb = new StringBuilder();
         String queryAlteration = query.getAlteration();
-        String altName = getGeneMutationNameInVariantSummary(alteration.getGene(), query.getReferenceGenome(), query.getHugoSymbol(), alteration.getName());
         Boolean appendThe = appendThe(queryAlteration);
         Boolean isPlural = false;
 
@@ -428,6 +426,7 @@ public class SummaryUtils {
             appendThe = false;
         }
         if (oncogenicity != null) {
+            String altName = getGeneMutationNameInVariantSummary(alteration.getGene(), query.getReferenceGenome(), query.getHugoSymbol(), alteration.getName());
             if (query.getAlteration().toLowerCase().contains("truncating mutation") && query.getSvType() != null) {
                 return "This " + alteration.getGene().getHugoSymbol() + " " + query.getSvType().name().toLowerCase() + " may be a truncating alteration and is " + getOncogenicSubTextFromOncogenicity(oncogenicity) + ".";
             }
@@ -442,7 +441,12 @@ public class SummaryUtils {
             if (appendThe) {
                 sb.append("The ");
             }
-            sb.append(altName);
+
+            if (alteration.getName().equals(alteration.getAlteration()) && AlterationUtils.isRangeInframeAlteration(alteration)) {
+                sb.append(getInframeIndelNameWithRange(alteration));
+            } else {
+                sb.append(altName);
+            }
 
             if (isPlural) {
                 sb.append(" are");
@@ -671,10 +675,14 @@ public class SummaryUtils {
         Set<Alteration> specialAlts = new HashSet<>();
 
         for (Alteration alteration : alterations) {
-            if (alteration.getProteinStart() != null && alteration.getProteinEnd() != null &&
-                alteration.getProteinStart().equals(alteration.getProteinEnd())) {
+            if (
+                alteration.getProteinStart() != null &&
+                    alteration.getProteinEnd() != null &&
+                    alteration.getProteinStart().equals(alteration.getProteinEnd()) &&
+                    VariantConsequenceUtils.findVariantConsequenceByTerm(MISSENSE_VARIANT).equals(alteration.getConsequence())
+            ) {
                 if (!locationBasedAlts.containsKey(alteration.getProteinStart()))
-                    locationBasedAlts.put(alteration.getProteinStart(), new HashSet<Alteration>());
+                    locationBasedAlts.put(alteration.getProteinStart(), new HashSet<>());
                 locationBasedAlts.get(alteration.getProteinStart()).add(alteration);
             } else {
                 specialAlts.add(alteration);
@@ -685,10 +693,9 @@ public class SummaryUtils {
             alterationNames.add(alleleNamesStr((Set<Alteration>) entry.getValue()));
         }
 
-        for (Alteration alteration : specialAlts) {
-            alterationNames.add(alleleNamesStr(Collections.singleton(alteration)));
-        }
-
+        List<Alteration> sortedAlts = new ArrayList<>(specialAlts);
+        Collections.sort(sortedAlts, Comparator.comparingInt(Alteration::getProteinStart).thenComparingInt(Alteration::getProteinEnd).thenComparing(Alteration::getName));
+        alterationNames.addAll(sortedAlts.stream().map(Alteration::getName).collect(Collectors.toList()));
         return MainUtils.listToString(alterationNames);
     }
 
@@ -787,8 +794,10 @@ public class SummaryUtils {
             || StringUtils.containsIgnoreCase(queryAlteration, "splice")
             || MainUtils.isEGFRTruncatingVariants(queryAlteration)
             ) {
-            if (NamingUtils.hasAbbreviation(queryAlteration)) {
-                sb.append(queryHugoSymbol + " " + NamingUtils.getFullName(queryAlteration) + " (" + queryAlteration + ")");
+            if (NamingUtils.isAbbreviation(queryAlteration)) {
+                sb.append(queryHugoSymbol + " " + lowerCaseName(NamingUtils.getFullName(queryAlteration)) + " (" + queryAlteration + ")");
+            } else if (NamingUtils.hasAbbreviation(queryAlteration)) {
+                sb.append(queryHugoSymbol + " " + lowerCaseName(queryAlteration) + " (" + NamingUtils.getAbbreviation(queryAlteration) + ")");
             } else {
                 sb.append(queryHugoSymbol + " " + queryAlteration);
             }
@@ -798,8 +807,10 @@ public class SummaryUtils {
         } else {
             if (queryAlteration.contains(gene.getHugoSymbol()) || queryAlteration.contains(queryHugoSymbol)) {
                 sb.append(queryAlteration);
+            } else if (NamingUtils.isAbbreviation(queryAlteration)) {
+                sb.append(queryHugoSymbol + " " + lowerCaseName(NamingUtils.getFullName(queryAlteration)) + " (" + queryAlteration + ") alteration");
             } else if (NamingUtils.hasAbbreviation(queryAlteration)) {
-                sb.append(queryHugoSymbol + " " + NamingUtils.getFullName(queryAlteration) + " (" + queryAlteration + ") alteration");
+                sb.append(queryHugoSymbol + " " + lowerCaseName(queryAlteration) + " (" + NamingUtils.getAbbreviation(queryAlteration) + ") alteration");
             } else {
                 sb.append(queryHugoSymbol + " " + queryAlteration);
             }
@@ -856,6 +867,7 @@ public class SummaryUtils {
                 || StringUtils.containsIgnoreCase(queryAlteration, "del")
                 || StringUtils.containsIgnoreCase(queryAlteration, "ins")
                 || StringUtils.containsIgnoreCase(queryAlteration, "splice")
+                || NamingUtils.isAbbreviation(queryAlteration)
                 || NamingUtils.hasAbbreviation(queryAlteration)
                 || MainUtils.isEGFRTruncatingVariants(queryAlteration)
                 ) {
@@ -863,6 +875,21 @@ public class SummaryUtils {
             } else if (!queryAlteration.endsWith("mutation")) {
                 sb.append(queryAlteration + " mutant");
             }
+        }
+        return sb.toString();
+    }
+
+    public static String lowerCaseName(String name) {
+        String lowerCaseStr = name.toLowerCase();
+
+        StringBuilder sb = new StringBuilder(lowerCaseStr);
+
+        // Find all uppercase string
+        Pattern p = Pattern.compile("(\\b[A-Z0-9]+\\b)");
+        Matcher m = p.matcher(name);
+
+        while (m.find()) {
+            sb.replace(m.start(), m.end(), m.group(1));
         }
         return sb.toString();
     }
@@ -921,23 +948,13 @@ public class SummaryUtils {
         if (tumorType != null) {
             String[] specialWords = {"Wilms", "IgA", "IgG", "IgM", "Sezary", "Down", "Hodgkin", "Ewing", "Merkel"};
             List<String> specialWordsList = Arrays.asList(specialWords);
-            String lowerCaseStr = tumorType.toLowerCase();
-
-            StringBuilder sb = new StringBuilder(lowerCaseStr);
+            StringBuilder sb = new StringBuilder(lowerCaseName(tumorType.trim()));
 
             for (String item : specialWordsList) {
                 Integer startIndex = tumorType.indexOf(item);
                 if (startIndex != -1) {
                     sb.replace(startIndex, startIndex + item.length(), item);
                 }
-            }
-
-            // Find all uppercased string
-            Pattern p = Pattern.compile("(\\b[A-Z0-9]+\\b)");
-            Matcher m = p.matcher(tumorType);
-
-            while (m.find()) {
-                sb.replace(m.start(), m.end(), m.group(1));
             }
 
             tumorType = sb.toString();

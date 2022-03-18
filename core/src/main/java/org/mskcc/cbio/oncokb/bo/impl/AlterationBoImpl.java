@@ -100,7 +100,7 @@ public class AlterationBoImpl extends GenericBoImpl<Alteration, AlterationDao> i
             }
         }
 
-        if (NamingUtils.hasAbbreviation(alteration)) {
+        if (NamingUtils.isAbbreviation(alteration)) {
             return findAlteration(referenceGenome, NamingUtils.getFullName(alteration), fullAlterations);
         }
         return null;
