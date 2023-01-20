@@ -512,6 +512,12 @@ public class MainUtils {
                         variant.setVariant(alteration);
                         variant.setOncogenic(oncogenicityString);
                         variant.setLevel(evidence.getLevelOfEvidence().getLevel());
+                        if (evidence.getSolidPropagationLevel() != null) {
+                            variant.setSolidPropagationLevel(evidence.getSolidPropagationLevel().getLevel());
+                        }
+                        if (evidence.getLiquidPropagationLevel() != null) {
+                            variant.setLiquidPropagationLevel(evidence.getLiquidPropagationLevel().getLevel());
+                        }
                         if (evidence.getFdaLevel() != null) {
                             variant.setFdaLevel(evidence.getFdaLevel().getLevel());
                         }

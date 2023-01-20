@@ -67,6 +67,7 @@ public class UtilsApiController implements UtilsApi {
         header.add("Mutation Effect");
         header.add("PMIDs for Mutation Effect");
         header.add("Abstracts for Mutation Effect");
+        header.add("Description for Mutation Effect");
         sb.append(MainUtils.listToString(header, separator));
         sb.append(newLine);
 
@@ -85,6 +86,7 @@ public class UtilsApiController implements UtilsApi {
             row.add(annotatedVariant.getMutationEffect());
             row.add(annotatedVariant.getMutationEffectPmids());
             row.add(annotatedVariant.getMutationEffectAbstracts());
+            row.add(annotatedVariant.getMutationEffectDescription());
             sb.append(MainUtils.listToString(row, separator));
             sb.append(newLine);
         }
@@ -122,7 +124,9 @@ public class UtilsApiController implements UtilsApi {
                     biologicalVariant.getOncogenic(),
                     biologicalVariant.getMutationEffect(),
                     MainUtils.listToString(new ArrayList<>(biologicalVariant.getMutationEffectPmids()), ", ", true),
-                    MainUtils.listToString(abstracts, "; ", true)));
+                    MainUtils.listToString(abstracts, "; ", true),
+                    biologicalVariant.getMutationEffectDescription()
+                ));
             }
         }
 
@@ -163,9 +167,12 @@ public class UtilsApiController implements UtilsApi {
         header.add("Protein Change");
         header.add("Cancer Type");
         header.add("Level");
-        header.add("Drugs(s)");
+        header.add("Solid Propagation Level");
+        header.add("Liquid Propagation Level");
+        header.add("Drug(s)");
         header.add("PMIDs for drug");
         header.add("Abstracts for drug");
+        header.add("Description for drug");
         sb.append(MainUtils.listToString(header, separator));
         sb.append(newLine);
 
@@ -182,9 +189,12 @@ public class UtilsApiController implements UtilsApi {
             row.add(actionableGene.getProteinChange());
             row.add(actionableGene.getCancerType());
             row.add(actionableGene.getLevel());
+            row.add(actionableGene.getSolidPropagationLevel());
+            row.add(actionableGene.getLiquidPropagationLevel());
             row.add(actionableGene.getDrugs());
             row.add(actionableGene.getPmids());
             row.add(actionableGene.getAbstracts());
+            row.add(actionableGene.getDescription());
             sb.append(MainUtils.listToString(row, separator));
             sb.append(newLine);
         }
@@ -222,9 +232,13 @@ public class UtilsApiController implements UtilsApi {
                         clinicalVariant.getVariant().getAlteration(),
                         TumorTypeUtils.getTumorTypesNameWithExclusion(clinicalVariant.getCancerTypes(), clinicalVariant.getExcludedCancerTypes()),
                         clinicalVariant.getLevel(),
+                        clinicalVariant.getSolidPropagationLevel(),
+                        clinicalVariant.getLiquidPropagationLevel(),
                         MainUtils.listToString(new ArrayList<>(clinicalVariant.getDrug()), ", ", true),
                         MainUtils.listToString(new ArrayList<>(clinicalVariant.getDrugPmids()), ", ", true),
-                        MainUtils.listToString(abstracts, "; ", true))
+                        MainUtils.listToString(abstracts, "; ", true),
+                        clinicalVariant.getDrugDescription()
+                        )
                     );
                 } else {
                     for (TumorType tumorType : clinicalVariant.getCancerTypes()) {
@@ -238,9 +252,13 @@ public class UtilsApiController implements UtilsApi {
                             clinicalVariant.getVariant().getAlteration(),
                             TumorTypeUtils.getTumorTypeName(tumorType),
                             clinicalVariant.getLevel(),
+                            clinicalVariant.getSolidPropagationLevel(),
+                            clinicalVariant.getLiquidPropagationLevel(),
                             MainUtils.listToString(new ArrayList<>(clinicalVariant.getDrug()), ", ", true),
                             MainUtils.listToString(new ArrayList<>(clinicalVariant.getDrugPmids()), ", ", true),
-                            MainUtils.listToString(abstracts, "; ", true))
+                            MainUtils.listToString(abstracts, "; ", true),
+                            clinicalVariant.getDrugDescription()
+                            )
                         );
                     }
                 }
