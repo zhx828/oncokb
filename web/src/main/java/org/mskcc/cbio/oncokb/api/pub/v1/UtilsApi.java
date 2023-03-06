@@ -54,31 +54,33 @@ public interface UtilsApi {
         @ApiParam(value = VERSION) @RequestParam(value = "version", required = false) String version
     );
 
+    @PublicApi
     @PremiumPublicApi
-    @ApiOperation(value = "", notes = "Get All Actionable Variants.", response = ActionableGene.class, responseContainer = "List", tags = {"Variants"})
+    @ApiOperation(value = "", notes = "Get All Actionable Genes.", response = ActionableGene.class, responseContainer = "List", tags = {"Genes", "Variants"})
     @ApiResponses(value = {
         @ApiResponse(code = 200, message = "OK", response = ActionableGene.class, responseContainer = "List"),
         @ApiResponse(code = 404, message = "Not Found"),
         @ApiResponse(code = 503, message = "Service Unavailable")
     })
-    @RequestMapping(value = "/utils/allActionableVariants", produces = {"application/json"},
+    @RequestMapping(value = "/utils/allActionableGenes", produces = {"application/json"},
         method = RequestMethod.GET)
-    ResponseEntity<List<ActionableGene>> utilsAllActionableVariantsGet(
+    ResponseEntity<List<ActionableGene>> utilsAllActionableGenesGet(
         @ApiParam(value = VERSION) @RequestParam(value = "version", required = false) String version
     );
 
 
+    @PublicApi
     @PremiumPublicApi
-    @ApiOperation(value = "", notes = "Get All Actionable Variants in text file.", tags = {"Variants"})
+    @ApiOperation(value = "", notes = "Get All Actionable Variants in text file.", tags = {"Genes", "Variants"})
     @ApiResponses(value = {
         @ApiResponse(code = 200, message = "OK"),
         @ApiResponse(code = 404, message = "Not Found"),
         @ApiResponse(code = 503, message = "Service Unavailable")
     })
-    @RequestMapping(value = "/utils/allActionableVariants.txt",
+    @RequestMapping(value = "/utils/allActionableGenes.txt",
         produces = TEXT_PLAIN_VALUE,
         method = RequestMethod.GET)
-    ResponseEntity<String> utilsAllActionableVariantsTxtGet(
+    ResponseEntity<String> utilsAllActionableGenesTxtGet(
         @ApiParam(value = VERSION) @RequestParam(value = "version", required = false) String version
     );
 

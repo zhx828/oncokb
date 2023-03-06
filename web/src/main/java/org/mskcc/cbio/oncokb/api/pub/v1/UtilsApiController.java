@@ -132,21 +132,21 @@ public class UtilsApiController implements UtilsApi {
     }
 
     @Override
-    public ResponseEntity<List<ActionableGene>> utilsAllActionableVariantsGet(
+    public ResponseEntity<List<ActionableGene>> utilsAllActionableGenesGet(
         @ApiParam(value = VERSION) @RequestParam(value = "version", required = false) String version
     ) {
         if (version != null) {
-            return getDataDownloadResponseEntity(version, FileName.ALL_ACTIONABLE_VARIANTS, FileExtension.JSON);
+            return getDataDownloadResponseEntity(version, FileName.ALL_ACTIONABLE_GENES, FileExtension.JSON);
         }
         return new ResponseEntity<>(getAllActionableVariants(), HttpStatus.OK);
     }
 
     @Override
-    public ResponseEntity<String> utilsAllActionableVariantsTxtGet(
+    public ResponseEntity<String> utilsAllActionableGenesTxtGet(
         @ApiParam(value = VERSION) @RequestParam(value = "version", required = false) String version
     ) {
         if (version != null) {
-            return getDataDownloadResponseEntity(version, FileName.ALL_ACTIONABLE_VARIANTS, FileExtension.TEXT);
+            return getDataDownloadResponseEntity(version, FileName.ALL_ACTIONABLE_GENES, FileExtension.TEXT);
         }
         String separator = "\t";
         String newLine = "\n";
