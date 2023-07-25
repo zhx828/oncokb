@@ -272,10 +272,7 @@ public class PrivateSearchApiController implements PrivateSearchApi {
                 typeaheadSearchResp.setHighestResistanceLevel(highestLevel.getLevel());
             }
 
-            Alteration[] highestLevelAlterations = cancerMatch.getAlterationsByLevel().get(highestLevel).toArray(new Alteration[0]);
-            Gene linkGene = highestLevelAlterations[0].getGene();
-            typeaheadSearchResp.setLink("actionableGenes#hugoSymbol=" + linkGene.getHugoSymbol() + "&sections=Tx&tumorType=" + cancerMatch.getCancerType().getCode());
-
+            typeaheadSearchResp.setLink("actionableGenes#sections=Tx&tumorType=" + cancerMatch.getCancerType().getCode());
         } else {
             typeaheadSearchResp.setLink("");
         }
