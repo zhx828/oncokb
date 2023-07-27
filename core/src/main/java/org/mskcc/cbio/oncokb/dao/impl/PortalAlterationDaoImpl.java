@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.mskcc.cbio.oncokb.apiModels.CancerTypeCount;
+import org.mskcc.cbio.oncokb.apiModels.GeneCount;
 import org.mskcc.cbio.oncokb.dao.PortalAlterationDao;
 import org.mskcc.cbio.oncokb.model.Gene;
 import org.mskcc.cbio.oncokb.model.PortalAlteration;
@@ -33,5 +34,9 @@ public class PortalAlterationDaoImpl extends GenericDaoImpl<PortalAlteration, In
     public List<PortalAlteration> findMutationMapperData(Gene gene) {
         List<PortalAlteration> PortalAlteration = findByNamedQuery("findMutationMapperData", gene);
         return PortalAlteration;
+    }
+
+    public List<GeneCount> findGeneCountByCancerType(String cancerType) {
+        return (List<GeneCount>) getHibernateTemplate().findByNamedQuery("findGeneCountByCancerType", cancerType);
     }
 }

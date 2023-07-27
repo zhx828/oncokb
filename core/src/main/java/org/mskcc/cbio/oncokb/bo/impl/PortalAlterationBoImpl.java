@@ -8,6 +8,7 @@ package org.mskcc.cbio.oncokb.bo.impl;
 import java.util.List;
 
 import org.mskcc.cbio.oncokb.apiModels.CancerTypeCount;
+import org.mskcc.cbio.oncokb.apiModels.GeneCount;
 import org.mskcc.cbio.oncokb.bo.PortalAlterationBo;
 import org.mskcc.cbio.oncokb.dao.PortalAlterationDao;
 import org.mskcc.cbio.oncokb.model.Gene;
@@ -32,5 +33,10 @@ public class PortalAlterationBoImpl extends GenericBoImpl<PortalAlteration, Port
     @Override
     public List<PortalAlteration> findMutationMapperData(Gene gene) {
         return getDao().findMutationMapperData(gene);
+    }
+
+    @Override
+    public List<GeneCount> findGeneCountByCancerType(String cancerType) {
+        return getDao().findGeneCountByCancerType(cancerType);
     }
 }

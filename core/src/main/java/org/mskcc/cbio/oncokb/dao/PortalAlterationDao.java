@@ -8,6 +8,7 @@ package org.mskcc.cbio.oncokb.dao;
 import java.util.List;
 
 import org.mskcc.cbio.oncokb.apiModels.CancerTypeCount;
+import org.mskcc.cbio.oncokb.apiModels.GeneCount;
 import org.mskcc.cbio.oncokb.model.Gene;
 import org.mskcc.cbio.oncokb.model.PortalAlteration;
 
@@ -22,4 +23,5 @@ public interface PortalAlterationDao extends GenericDao<PortalAlteration, Intege
     List<CancerTypeCount> findPortalAlterationCount();
 
     List<PortalAlteration> findMutationMapperData(Gene gene);
+    List<GeneCount> findGeneCountByCancerType(String cancerType);
 }

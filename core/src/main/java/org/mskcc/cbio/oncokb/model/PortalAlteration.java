@@ -28,6 +28,10 @@ import java.io.Serializable;
     @NamedQuery(
         name = "findMutationMapperData",
         query = "select distinct pa from PortalAlteration pa, Alteration a join a.portalAlterations ap where pa.id = ap.id and pa.gene=?"
+    ),
+    @NamedQuery(
+        name = "findGeneCountByCancerType",
+        query = "select pa.gene, count(pa.proteinChange) from PortalAlteration pa where pa.cancerType=? group by pa.gene"
     )
 })
 
