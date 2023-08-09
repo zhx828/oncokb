@@ -28,6 +28,7 @@ public class IndicatorQueryResp implements java.io.Serializable {
     private List<LevelOfEvidence> otherSignificantResistanceLevels = new ArrayList<>();
     private Boolean VUS;
     private Boolean hotspot;
+    private Boolean resistance = false;
     private String geneSummary = "";
     private String variantSummary = "";
     private String tumorTypeSummary = "";
@@ -181,6 +182,14 @@ public class IndicatorQueryResp implements java.io.Serializable {
 
     public void setHotspot(Boolean hotspot) {
         this.hotspot = hotspot;
+    }
+
+    public Boolean getResistance() {
+        return resistance;
+    }
+
+    public void setResistance(Boolean resistance) {
+        this.resistance = resistance;
     }
 
     public Boolean getAlleleExist() {

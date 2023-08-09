@@ -320,7 +320,7 @@ public class EvidenceController {
             return new ArrayList<>(evidences);
         }
         // common cases for evidence update
-        // Use controlled vocabulary to update oncogenic knowneffect
+        // Use controlled vocabulary to update oncogenic known effect
         if (evidenceType.equals(EvidenceType.ONCOGENIC)) {
             DriveAnnotationParser driveAnnotationParser = new DriveAnnotationParser();
             Oncogenicity oncogenicity = driveAnnotationParser.getOncogenicityByString(knownEffect);

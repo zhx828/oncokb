@@ -325,14 +325,14 @@ public class DriveAnnotationParser {
             Oncogenicity oncogenic = getOncogenicity(mutationEffect);
             String oncogenic_uuid = getUUID(mutationEffect, "oncogenic");
             Date oncogenic_lastEdit = getLastEdit(mutationEffect, "oncogenic");
-//            Date oncogenic_lastReview = getLastReview(mutationEffect, "oncogenic");
+            Oncogenicity resistance = getResistance(mutationEffect);
+            String resistanceUuid = getUUID(mutationEffect, "resistance");
+            Date resistanceLastEdit = getLastEdit(mutationEffect, "resistance");
 
             Set<Date> lastEditDatesEffect = new HashSet<>();
-            Set<Date> lastReviewDatesEffect = new HashSet<>();
 
             String effect = mutationEffect.has("effect") ? mutationEffect.getString("effect") : null;
             addDateToLastEditSetFromObject(lastEditDatesEffect, mutationEffect, "effect");
-//            addDateToLastReviewSetFromLong(lastReviewDatesEffect, mutationEffect, "effect");
             String effect_uuid = getUUID(mutationEffect, "effect");
 
             List<Alteration> mutations = AlterationUtils.parseMutationString(mutationStr, ",");
@@ -352,7 +352,8 @@ public class DriveAnnotationParser {
                     alterationBo.save(alteration);
                 }
                 alterations.add(alteration);
-                setOncogenic(gene, alteration, oncogenic, oncogenic_uuid, oncogenic_lastEdit);
+                setOncogenic(gene, alteration, oncogenic, oncogenic_uuid, oncogenic_lastEdit, false);
+                setOncogenic(gene, alteration, resistance, resistanceUuid, resistanceLastEdit, true);
             }
 
             // mutation effect
@@ -394,6 +395,9 @@ public class DriveAnnotationParser {
                 EvidenceBo evidenceBo = ApplicationContextSingleton.getEvidenceBo();
                 evidenceBo.save(evidence);
             }
+
+            // save mutation summary if available
+            saveMutationSummary(mutationObj, "summary", gene, alterations, nestLevel);
 
             // cancers
             if (mutationObj.has("tumors")) {
@@ -484,11 +488,31 @@ public class DriveAnnotationParser {
         return oncogenic;
     }
 
-    private void setOncogenic(Gene gene, Alteration alteration, Oncogenicity oncogenic, String uuid, Date lastEdit) {
-        if (alteration != null && gene != null && oncogenic != null) {
+    private Oncogenicity getResistance(JSONObject mutationEffect) throws JSONException {
+        Oncogenicity oncogenic = null;
+        if (mutationEffect.has("resistance") && !mutationEffect.getString("resistance").isEmpty()) {
+            oncogenic = Oncogenicity.RESISTANCE;
+        }
+        return oncogenic;
+    }
+
+    private void setOncogenic(Gene gene, Alteration alteration, Oncogenicity oncogenic, String uuid, Date lastEdit, boolean forResistance) {
+        if (alteration != null && gene != null) {
             EvidenceBo evidenceBo = ApplicationContextSingleton.getEvidenceBo();
-            List<Evidence> evidences = evidenceBo.findEvidencesByAlteration(Collections.singleton(alteration), Collections.singleton(EvidenceType.ONCOGENIC));
-            if (evidences.isEmpty()) {
+            List<Evidence> evidences = evidenceBo
+                .findEvidencesByAlteration(Collections.singleton(alteration), Collections.singleton(EvidenceType.ONCOGENIC))
+                .stream().filter(evidence -> {
+                    Oncogenicity oncogenicity = Oncogenicity.getByEvidence(evidence);
+                    if (oncogenicity == null) {
+                        return false;
+                    } else if (Oncogenicity.RESISTANCE.equals(oncogenicity)) {
+                        return forResistance;
+                    } else {
+                        return !forResistance;
+                    }
+                })
+                .collect(Collectors.toList());
+            if (evidences.isEmpty() && oncogenic != null) {
                 Evidence evidence = new Evidence();
                 evidence.setGene(gene);
                 evidence.setAlterations(Collections.singleton(alteration));
@@ -496,13 +520,41 @@ public class DriveAnnotationParser {
                 evidence.setKnownEffect(oncogenic.getOncogenic());
                 evidence.setUuid(uuid);
                 evidence.setLastEdit(lastEdit);
-//                evidence.setLastReview(lastReview);
                 evidenceBo.save(evidence);
-            } else if (Oncogenicity.compare(oncogenic, Oncogenicity.getByEvidence(evidences.get(0))) > 0) {
-                evidences.get(0).setKnownEffect(oncogenic.getOncogenic());
-                evidences.get(0).setLastEdit(lastEdit);
-                evidenceBo.update(evidences.get(0));
+            } else {
+                if (oncogenic == null) {
+                    evidences.forEach(evidence -> {
+                        evidence.setKnownEffect(oncogenic.getOncogenic());
+                        evidence.setLastEdit(lastEdit);
+                        evidenceBo.update(evidence);
+                    });
+                } else {
+                    evidenceBo.deleteAll(evidences);
+                }
             }
+        }
+    }
+    private void saveMutationSummary(JSONObject mutationObj, String summaryKey, Gene gene, Set<Alteration> alterations, int nestLevel) {
+        if (mutationObj.has(summaryKey) && !mutationObj.getString(summaryKey).isEmpty()) {
+            String summary = mutationObj.getString(summaryKey);
+            EvidenceBo evidenceBo = ApplicationContextSingleton.getEvidenceBo();
+            System.out.println(spaceStrByNestLevel(nestLevel + 1) + " " + summaryKey);
+            Date lastEdit = getLastEdit(mutationObj, summaryKey);
+            Evidence evidence = new Evidence();
+            evidence.setEvidenceType(EvidenceType.MUTATION_SUMMARY);
+            evidence.setGene(gene);
+            evidence.setDescription(summary);
+            evidence.setUuid(getUUID(mutationObj, summaryKey));
+            evidence.setAlterations(alterations);
+            evidence.setLastEdit(lastEdit);
+            if (lastEdit != null) {
+                System.out.println(spaceStrByNestLevel(nestLevel + 2) +
+                    "Last update on: " + MainUtils.getTimeByDate(lastEdit));
+            }
+            setDocuments(summary, evidence);
+            System.out.println(spaceStrByNestLevel(nestLevel + 2) +
+                "Has description.");
+            evidenceBo.save(evidence);
         }
     }
 

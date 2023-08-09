@@ -258,6 +258,21 @@ public class SummaryUtils {
                 return synonymousSummary();
             }
 
+            // Find curated mutation summary, and use it if exists
+            List<Evidence> mutationSummaries = EvidenceUtils.getEvidence(Collections.singletonList(exactMatchAlteration), Collections.singleton(EvidenceType.MUTATION_SUMMARY), null);
+            if (mutationSummaries.size() > 0) {
+                mutationSummaries.sort((x, y) -> {
+                    if (x.getLastEdit() == null) {
+                        return y.getLastEdit() == null ? -1 : 1;
+                    } else if (y.getLastEdit() == null) {
+                        return -1;
+                    } else {
+                        return -1 * x.getLastEdit().compareTo(y.getLastEdit());
+                    }
+                });
+                return mutationSummaries.get(0).getDescription();
+            }
+
             // Find oncogenic info from exact matched variant
             List<Evidence> oncogenicEvidences = EvidenceUtils.getEvidence(Collections.singletonList(exactMatchAlteration), Collections.singleton(EvidenceType.ONCOGENIC), null);
             if (oncogenicEvidences != null && oncogenicEvidences.size() > 0) {
