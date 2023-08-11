@@ -10,16 +10,20 @@ import org.mskcc.cbio.oncokb.apiModels.LevelsOfEvidenceMatch;
 import org.mskcc.cbio.oncokb.bo.OncokbTranscriptService;
 import org.mskcc.cbio.oncokb.cache.CacheFetcher;
 import org.mskcc.cbio.oncokb.genomenexus.GNVariantAnnotationType;
+import org.mskcc.cbio.oncokb.importer.VariantConsequenceImporter;
 import org.mskcc.cbio.oncokb.model.*;
 import org.mskcc.cbio.oncokb.model.TumorType;
 import org.mskcc.cbio.oncokb.util.*;
 import org.oncokb.oncokb_transcript.ApiException;
+import org.oncokb.oncokb_transcript.client.TranscriptComparisonResultVM;
+import org.oncokb.oncokb_transcript.client.TranscriptPairVM;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
@@ -236,6 +240,161 @@ public class PrivateSearchApiController implements PrivateSearchApi {
         }
         OncokbTranscriptService oncokbTranscriptService = new OncokbTranscriptService();
         return new ResponseEntity<>(getLimit(new LinkedHashSet<>(oncokbTranscriptService.findDrugs(query)), limit), HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<String> matchManeTranscriptGet() throws ApiException {
+        OncokbTranscriptService oncokbTranscriptService = new OncokbTranscriptService();
+        List<ManeTranscript> maneTranscripts = parseManeTranscripts();
+        List<MskimpactTranscript> mskimpactTranscripts = parseMskimpactTranscripts();
+        List<Gene> genes = CacheUtils.getAllGenes().stream().sorted(Comparator.comparing(Gene::getEntrezGeneId)).collect(Collectors.toList());
+        final String MANE_SELECT = "MANE Select";
+        final String MANE_PLUS = "MANE Plus Clinical";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("entrez_gene_id\thugo_symbol\twithin_mskimpact\toncokb_37\toncokb_38\tsame_mskimpact_transcript\tmane_select\tmane_plus\tmane_status\talterations\tmatch_mane_select\tmatch_mane_plus\n");
+
+        for (Gene gene : genes) {
+            if (gene.getEntrezGeneId() < 0)
+                continue;
+            Transcript transcript = new Transcript();
+            transcript.setEntrezGeneId(gene.getEntrezGeneId());
+            transcript.setHugoSymbol(gene.getHugoSymbol());
+            transcript.setOncokb37Transcript(Optional.ofNullable(gene.getGrch37Isoform()).orElse(""));
+            transcript.setOncokb38Transcript(Optional.ofNullable(gene.getGrch38Isoform()).orElse(""));
+
+            // find gene in MSKIMPACT panel
+            Optional<MskimpactTranscript> matchedMskimpactTranscript = mskimpactTranscripts.stream().filter(mskimpactTranscript -> mskimpactTranscript.getGene() != null && mskimpactTranscript.getGene().equals(gene)).findAny();
+            transcript.setWithinMskimpact(matchedMskimpactTranscript.isPresent());
+
+
+            maneTranscripts
+                .stream()
+                .filter(maneTranscript -> maneTranscript.getEntrezGeneId() != null && maneTranscript.getEntrezGeneId().equals(gene.getEntrezGeneId()))
+                .forEach(maneTranscript -> {
+                    if (MANE_SELECT.equals(maneTranscript.maneStatus)) {
+                        transcript.setManeSelectTranscript(maneTranscript.getEnsemblTranscriptId());
+                        if (maneTranscript.getEnsemblTranscriptId().contains(transcript.getOncokb38Transcript())) {
+                            transcript.setManeStatus(MANE_SELECT);
+                        }
+                    } else if (MANE_PLUS.equals(maneTranscript.maneStatus)) {
+                        transcript.setManePlusTranscript(maneTranscript.getEnsemblTranscriptId());
+                        if (maneTranscript.getEnsemblTranscriptId().contains(transcript.getOncokb38Transcript())) {
+                            transcript.setManeStatus(MANE_PLUS);
+                        }
+                    }
+                });
+
+            if (matchedMskimpactTranscript.isPresent() && StringUtils.isNotEmpty(transcript.getOncokb38Transcript())) {
+                transcript.setSameMskimpactTranscript(transcript.getOncokb38Transcript().equals(matchedMskimpactTranscript.get().getTranscriptId()));
+            }
+
+            // if the oncokb grch38 cannot be mapped any MANE transcript, let's at least compare whether their protein sequences are the same
+//            if (StringUtils.isEmpty(transcript.getManeStatus()) && StringUtils.isNotEmpty(transcript.getOncokb38Transcript())) {
+//                if (StringUtils.isNotEmpty(transcript.getManeSelectTranscript())) {
+//                    try {
+//                        TranscriptComparisonResultVM resultVM = oncokbTranscriptService.compareTranscript(TranscriptPairVM.ReferenceGenomeEnum.GRCH38, gene, transcript.getOncokb38Transcript(), transcript.getManeSelectTranscript().substring(0, transcript.getManeSelectTranscript().lastIndexOf(".")));
+//                        transcript.setMatchWithManeSelectProtein(resultVM.getMatch().toString());
+//                    } catch (ApiException e) {
+//                        transcript.setMatchWithManeSelectProtein("ERROR: " + e.getResponseBody());
+//                    }
+//                }
+//                if (StringUtils.isNotEmpty(transcript.getManePlusTranscript())) {
+//                    try {
+//                        TranscriptComparisonResultVM resultVM = oncokbTranscriptService.compareTranscript(TranscriptPairVM.ReferenceGenomeEnum.GRCH38, gene, transcript.getOncokb38Transcript(), transcript.getManePlusTranscript().substring(0, transcript.getManePlusTranscript().lastIndexOf(".")));
+//                        transcript.setMatchWithManePlusProtein(resultVM.getMatch().toString());
+//                    } catch (ApiException e) {
+//                        transcript.setMatchWithManePlusProtein("ERROR: " + e.getResponseBody());
+//                    }
+//                }
+//            }
+
+            transcript.setAlterations(CacheUtils.getAlterations(transcript.entrezGeneId, ReferenceGenome.GRCh37).stream().map(alteration -> alteration.getName()).collect(Collectors.joining(",")));
+            sb.append(transcript);
+            sb.append("\n");
+        }
+        return ResponseEntity.ok(sb.toString());
+    }
+
+    private static final String MANE_SUMMARY_FILE = "/data/MANE.GRCh38.v1.2.summary.txt";
+    private static final String MSKIMPACT_PANEL_FILE = "/data/isoform_overrides_at_mskcc_grch38.txt";
+
+    private List<ManeTranscript> parseManeTranscripts() {
+        List<ManeTranscript> maneTranscripts = new ArrayList<>();
+        List<String> lines = new ArrayList<>();
+        try {
+            lines = FileUtils.readTrimedLinesStream(
+                this.getClass().getResourceAsStream(MANE_SUMMARY_FILE));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (lines.size() > 0) {
+            int nLines = lines.size();
+            System.out.println("Parsing MANE transcripts...");
+            for (int i = 0; i < nLines; i++) {
+                String line = lines.get(i);
+                if (line.startsWith("#")) continue;
+
+                String[] parts = line.split("\t");
+                if (parts.length < 10) {
+                    System.out.println("Skipping line, it does not have at least 10 cells. " + line);
+                    continue;
+                }
+
+                ManeTranscript maneTranscript = new ManeTranscript();
+
+                String entrezGeneId = Optional.ofNullable(parts[0]).orElse("").replace("GeneID:", "");
+                if (entrezGeneId != null) {
+                    maneTranscript.setEntrezGeneId(Integer.parseInt(entrezGeneId));
+                }
+                maneTranscript.setEnsemblGeneId(Optional.ofNullable(parts[1]).orElse(""));
+                maneTranscript.setHgncId(Optional.ofNullable(parts[2]).orElse("").replace("HGNC:", ""));
+                maneTranscript.setHugoSymbol(Optional.ofNullable(parts[3]).orElse(""));
+                maneTranscript.setDescription(Optional.ofNullable(parts[4]).orElse(""));
+                maneTranscript.setRefSeqTranscriptId(Optional.ofNullable(parts[5]).orElse(""));
+                maneTranscript.setRefSeqProteinId(Optional.ofNullable(parts[6]).orElse(""));
+                maneTranscript.setEnsemblTranscriptId(Optional.ofNullable(parts[7]).orElse(""));
+                maneTranscript.setEnsemblProteinId(Optional.ofNullable(parts[8]).orElse(""));
+                maneTranscript.setManeStatus(Optional.ofNullable(parts[9]).orElse(""));
+                maneTranscripts.add(maneTranscript);
+            }
+        }
+        return maneTranscripts;
+    }
+
+    private List<MskimpactTranscript> parseMskimpactTranscripts() {
+        List<MskimpactTranscript> mskimpactTranscripts = new ArrayList<>();
+        List<String> lines = new ArrayList<>();
+        try {
+            lines = FileUtils.readTrimedLinesStream(
+                this.getClass().getResourceAsStream(MSKIMPACT_PANEL_FILE));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (lines.size() > 0) {
+            int nLines = lines.size();
+            System.out.println("Parsing MSKIMPACT GRCh38 transcripts...");
+            for (int i = 0; i < nLines; i++) {
+                String line = lines.get(i);
+                if (line.startsWith("#")) continue;
+
+                String[] parts = line.split("\t");
+                if (parts.length < 2) {
+                    System.out.println("Skipping line, it does not have at least 2 cells. " + line);
+                    continue;
+                }
+
+                MskimpactTranscript mskimpactTranscript = new MskimpactTranscript();
+
+                mskimpactTranscript.setTranscriptId(Optional.ofNullable(parts[0]).orElse(""));
+                mskimpactTranscript.setGene(GeneUtils.getGene(Optional.ofNullable(parts[1]).orElse("")));
+                mskimpactTranscript.setRefSeqTranscriptId(Optional.ofNullable(parts[2]).orElse(""));
+                mskimpactTranscripts.add(mskimpactTranscript);
+            }
+        }
+        return mskimpactTranscripts;
     }
 
     private List<TypeaheadSearchResp> findMatchingCancerTypes(String query, Boolean exactMatch) {
@@ -847,5 +1006,259 @@ class AlterationCount {
 
     public void setCount(int count) {
         this.count = count;
+    }
+}
+
+class ManeTranscript {
+    Integer entrezGeneId;
+    String ensemblGeneId;
+    String ensemblTranscriptId;
+    String ensemblProteinId;
+    String hgncId;
+    String hugoSymbol;
+    String description;
+    String refSeqTranscriptId;
+    String refSeqProteinId;
+    String maneStatus;
+
+    public Integer getEntrezGeneId() {
+        return entrezGeneId;
+    }
+
+    public void setEntrezGeneId(Integer entrezGeneId) {
+        this.entrezGeneId = entrezGeneId;
+    }
+
+    public String getEnsemblGeneId() {
+        return ensemblGeneId;
+    }
+
+    public void setEnsemblGeneId(String ensemblGeneId) {
+        this.ensemblGeneId = ensemblGeneId;
+    }
+
+    public String getEnsemblTranscriptId() {
+        return ensemblTranscriptId;
+    }
+
+    public void setEnsemblTranscriptId(String ensemblTranscriptId) {
+        this.ensemblTranscriptId = ensemblTranscriptId;
+    }
+
+    public String getEnsemblProteinId() {
+        return ensemblProteinId;
+    }
+
+    public void setEnsemblProteinId(String ensemblProteinId) {
+        this.ensemblProteinId = ensemblProteinId;
+    }
+
+    public String getHgncId() {
+        return hgncId;
+    }
+
+    public void setHgncId(String hgncId) {
+        this.hgncId = hgncId;
+    }
+
+    public String getHugoSymbol() {
+        return hugoSymbol;
+    }
+
+    public void setHugoSymbol(String hugoSymbol) {
+        this.hugoSymbol = hugoSymbol;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getRefSeqTranscriptId() {
+        return refSeqTranscriptId;
+    }
+
+    public void setRefSeqTranscriptId(String refSeqTranscriptId) {
+        this.refSeqTranscriptId = refSeqTranscriptId;
+    }
+
+    public String getRefSeqProteinId() {
+        return refSeqProteinId;
+    }
+
+    public void setRefSeqProteinId(String refSeqProteinId) {
+        this.refSeqProteinId = refSeqProteinId;
+    }
+
+    public String getManeStatus() {
+        return maneStatus;
+    }
+
+    public void setManeStatus(String maneStatus) {
+        this.maneStatus = maneStatus;
+    }
+}
+
+class MskimpactTranscript {
+    String transcriptId;
+    Gene gene;
+    String refSeqTranscriptId;
+
+    public String getTranscriptId() {
+        return transcriptId;
+    }
+
+    public void setTranscriptId(String transcriptId) {
+        this.transcriptId = transcriptId;
+    }
+
+    public Gene getGene() {
+        return gene;
+    }
+
+    public void setGene(Gene gene) {
+        this.gene = gene;
+    }
+
+    public String getRefSeqTranscriptId() {
+        return refSeqTranscriptId;
+    }
+
+    public void setRefSeqTranscriptId(String refSeqTranscriptId) {
+        this.refSeqTranscriptId = refSeqTranscriptId;
+    }
+}
+
+class Transcript {
+    Integer entrezGeneId;
+    String hugoSymbol;
+    Boolean withinMskimpact;
+    String oncokb37Transcript;
+    String oncokb38Transcript;
+    Boolean sameMskimpactTranscript;
+    String maneSelectTranscript;
+    String manePlusTranscript;
+    String maneStatus;
+    String alterations;
+    String matchWithManeSelectProtein;
+    String matchWithManePlusProtein;
+
+
+    public Integer getEntrezGeneId() {
+        return entrezGeneId;
+    }
+
+    public void setEntrezGeneId(Integer entrezGeneId) {
+        this.entrezGeneId = entrezGeneId;
+    }
+
+    public String getHugoSymbol() {
+        return hugoSymbol;
+    }
+
+    public void setHugoSymbol(String hugoSymbol) {
+        this.hugoSymbol = hugoSymbol;
+    }
+
+    public String getOncokb37Transcript() {
+        return oncokb37Transcript;
+    }
+
+    public void setOncokb37Transcript(String oncokb37Transcript) {
+        this.oncokb37Transcript = oncokb37Transcript;
+    }
+
+    public String getOncokb38Transcript() {
+        return oncokb38Transcript;
+    }
+
+    public void setOncokb38Transcript(String oncokb38Transcript) {
+        this.oncokb38Transcript = oncokb38Transcript;
+    }
+
+    public String getManeSelectTranscript() {
+        return maneSelectTranscript;
+    }
+
+    public void setManeSelectTranscript(String maneSelectTranscript) {
+        this.maneSelectTranscript = maneSelectTranscript;
+    }
+
+    public Boolean getSameMskimpactTranscript() {
+        return sameMskimpactTranscript;
+    }
+
+    public void setSameMskimpactTranscript(Boolean sameMskimpactTranscript) {
+        this.sameMskimpactTranscript = sameMskimpactTranscript;
+    }
+
+    public Boolean getWithinMskimpact() {
+        return withinMskimpact;
+    }
+
+    public void setWithinMskimpact(Boolean withinMskimpact) {
+        this.withinMskimpact = withinMskimpact;
+    }
+
+    public String getManePlusTranscript() {
+        return manePlusTranscript;
+    }
+
+    public void setManePlusTranscript(String manePlusTranscript) {
+        this.manePlusTranscript = manePlusTranscript;
+    }
+
+    public String getManeStatus() {
+        return maneStatus;
+    }
+
+    public void setManeStatus(String maneStatus) {
+        this.maneStatus = maneStatus;
+    }
+
+    public String getAlterations() {
+        return alterations;
+    }
+
+    public void setAlterations(String alterations) {
+        this.alterations = alterations;
+    }
+
+    public String getMatchWithManeSelectProtein() {
+        return matchWithManeSelectProtein;
+    }
+
+    public void setMatchWithManeSelectProtein(String matchWithManeSelectProtein) {
+        this.matchWithManeSelectProtein = matchWithManeSelectProtein;
+    }
+
+    public String getMatchWithManePlusProtein() {
+        return matchWithManePlusProtein;
+    }
+
+    public void setMatchWithManePlusProtein(String matchWithManePlusProtein) {
+        this.matchWithManePlusProtein = matchWithManePlusProtein;
+    }
+
+    @Override
+    public String toString() {
+        return StringUtils.join(
+            Arrays.asList(
+                entrezGeneId,
+                hugoSymbol,
+                withinMskimpact,
+                oncokb37Transcript,
+                oncokb38Transcript,
+                sameMskimpactTranscript,
+                maneSelectTranscript,
+                manePlusTranscript,
+                maneStatus,
+                alterations,
+                matchWithManeSelectProtein,
+                matchWithManePlusProtein
+            ), "\t");
     }
 }

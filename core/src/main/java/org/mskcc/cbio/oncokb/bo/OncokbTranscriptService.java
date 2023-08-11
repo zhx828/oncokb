@@ -83,34 +83,37 @@ public class OncokbTranscriptService {
         return transcriptUpdateValidationVM;
     }
 
-    private TranscriptComparisonResultVM compareTranscript(TranscriptPairVM.ReferenceGenomeEnum referenceGenome, Gene gene, String ensemblTranscriptId) throws ApiException {
+    public TranscriptComparisonResultVM compareTranscript(TranscriptPairVM.ReferenceGenomeEnum referenceGenome, Gene gene, String ensemblTranscriptId) throws ApiException {
         SequenceControllerApi sequenceControllerApi = new SequenceControllerApi();
-        TranscriptControllerApi controllerApi = new TranscriptControllerApi();
 
-        Sequence pickedSequence = null;
-        pickedSequence = sequenceControllerApi.findCanonicalSequenceUsingGET(referenceGenome.toString(), gene.getEntrezGeneId(), SEQUENCE_TYPE);
+        Sequence pickedSequence = sequenceControllerApi.findCanonicalSequenceUsingGET(referenceGenome.toString(), gene.getEntrezGeneId(), SEQUENCE_TYPE);
         if (pickedSequence == null) {
             return null;
         } else {
-
-            TranscriptComparisonVM vm = new TranscriptComparisonVM();
-            vm.setAlign(true);
-
-            // Pair A is the old transcript
-            TranscriptPairVM pairA = new TranscriptPairVM();
-            pairA.setReferenceGenome(referenceGenome);
-            pairA.setTranscript(pickedSequence.getTranscript().getEnsemblTranscriptId());
-
-            // Pair B is the new transcript
-            TranscriptPairVM pairB = new TranscriptPairVM();
-            pairB.setReferenceGenome(referenceGenome);
-            pairB.setTranscript(ensemblTranscriptId);
-
-            vm.setTranscriptA(pairA);
-            vm.setTranscriptB(pairB);
-
-            return controllerApi.compareTranscriptUsingPOST(gene.getHugoSymbol(), vm);
+            return compareTranscript(referenceGenome, gene, pickedSequence.getTranscript().getEnsemblTranscriptId(), ensemblTranscriptId);
         }
+    }
+
+    public TranscriptComparisonResultVM compareTranscript(TranscriptPairVM.ReferenceGenomeEnum referenceGenome, Gene gene, String ensemblTranscriptIdA, String ensemblTranscriptIdB) throws ApiException {
+        TranscriptControllerApi controllerApi = new TranscriptControllerApi();
+
+        TranscriptComparisonVM vm = new TranscriptComparisonVM();
+        vm.setAlign(true);
+
+        // Pair A is the old transcript
+        TranscriptPairVM pairA = new TranscriptPairVM();
+        pairA.setReferenceGenome(referenceGenome);
+        pairA.setTranscript(ensemblTranscriptIdA);
+
+        // Pair B is the new transcript
+        TranscriptPairVM pairB = new TranscriptPairVM();
+        pairB.setReferenceGenome(referenceGenome);
+        pairB.setTranscript(ensemblTranscriptIdB);
+
+        vm.setTranscriptA(pairA);
+        vm.setTranscriptB(pairB);
+
+        return controllerApi.compareTranscriptUsingPOST(gene.getHugoSymbol(), vm);
     }
 
     public String getProteinSequence(ReferenceGenome referenceGenome, Gene gene) throws ApiException {

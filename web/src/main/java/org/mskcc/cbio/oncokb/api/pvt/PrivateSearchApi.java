@@ -70,5 +70,10 @@ public interface PrivateSearchApi {
         @ApiParam(value = "The search query, it could be drug name, NCIT code", required = true) @RequestParam(value = "query") String query,
         @ApiParam(value = "The limit of returned result.") @RequestParam(value = "limit", defaultValue = "5", required = false) Integer limit
     ) throws ApiException;
+
+    @RequestMapping(value = "/match-mane-transcript",
+        produces = {"application/text"},
+        method = RequestMethod.GET)
+    ResponseEntity<String> matchManeTranscriptGet() throws ApiException;
 }
 
