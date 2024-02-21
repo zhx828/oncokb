@@ -14,7 +14,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.mskcc.cbio.oncokb.Constants.*;
+import static org.mskcc.cbio.oncokb.model.StructuralAlteration.TRUNCATING_MUTATIONS;
 import static org.mskcc.cbio.oncokb.util.MainUtils.isOncogenic;
+import static org.mskcc.cbio.oncokb.util.VariantConsequenceUtils.TOO_BROAD_CONSEQUENCES;
 
 /**
  * @author jgao, Hongxin Zhang
@@ -106,7 +108,10 @@ public final class AlterationUtils {
     }
 
     private static Matcher getExclusionCriteriaMatcher(String proteinChange) {
-        Pattern exclusionPatter = Pattern.compile("(.*)\\{\\s*(exclude|excluding)(.*)\\}", Pattern.CASE_INSENSITIVE);
+        if (proteinChange == null) {
+            proteinChange = "";
+        }
+        Pattern exclusionPatter = Pattern.compile("(.*)[\\{\\(]\\s*(exclude|excluding)(.*)[\\}\\)](.*)?", Pattern.CASE_INSENSITIVE);
         Matcher exclusionMatch = exclusionPatter.matcher(proteinChange);
         return exclusionMatch;
     }
@@ -489,6 +494,10 @@ public final class AlterationUtils {
             if (isPositionedAlteration(alteration) && alteration.getConsequence().equals(VariantConsequenceUtils.findVariantConsequenceByTerm(MISSENSE_VARIANT))) {
                 alteration.setConsequence(variantConsequence);
             }
+            // if the consequence provided by the user is too broad, we ignore and use the interpreted variant consequence
+            if (TOO_BROAD_CONSEQUENCES.contains(alteration.getConsequence().getTerm())) {
+                alteration.setConsequence(variantConsequence);
+            }
         }
 
         // Annotate alteration based on consequence and special rules
@@ -809,6 +818,10 @@ public final class AlterationUtils {
         return isLikelyInferredAlt;
     }
 
+    public static Boolean isTruncatingMutations(String alteration) {
+        return TRUNCATING_MUTATIONS.getVariant().toLowerCase().equals(alteration.toLowerCase());
+    }
+
     public static Set<Alteration> getEvidencesAlterations(Set<Evidence> evidences) {
         Set<Alteration> alterations = new HashSet<>();
         if (evidences == null) {
@@ -1061,8 +1074,15 @@ public final class AlterationUtils {
         if (alteration != null && alteration.getConsequence() != null && alteration.getConsequence().getTerm().equals(MISSENSE_VARIANT)) {
             // check for positional variant when the consequence is forced to be missense variant
             boolean isMissensePositionalVariant = StringUtils.isEmpty(alteration.getVariantResidues()) && alteration.getProteinStart() != null && alteration.getProteinEnd() != null && alteration.getProteinStart().equals(alteration.getProteinEnd());
-            List<Alteration> alternativeAlleles = alterationBo.findRelevantOverlapAlterations(alteration.getGene(), referenceGenome, alteration.getConsequence(), alteration.getProteinStart(), alteration.getProteinEnd(), alteration.getAlteration(), relevantAlterations);
-            for (Alteration allele : alternativeAlleles) {
+            List<Alteration> overlapAlterations = alterationBo.findRelevantOverlapAlterations(alteration.getGene(), referenceGenome, alteration.getConsequence(), alteration.getProteinStart(), alteration.getProteinEnd(), alteration.getAlteration(), relevantAlterations);
+            for (Alteration allele : overlapAlterations) {
+//                if (allele.equals(alteration)) {
+//                    continue;
+//                }
+                // range missense mutations is not alternative allele
+                if(allele.getAlteration().endsWith("mis")){
+                    continue;
+                }
                 // remove all alleles if the alteration variant residue is empty
                 if (isMissensePositionalVariant && !StringUtils.isEmpty(allele.getVariantResidues())) {
                     relevantAlterations.remove(allele);
@@ -1125,7 +1145,7 @@ public final class AlterationUtils {
         return null;
     }
 
-    public static List<Alteration> lookupVariant(String query, Boolean exactMatch, List<Alteration> alterations) {
+    public static List<Alteration> lookupVariant(String query, Boolean exactMatch, Boolean omitExclusion, List<Alteration> alterations) {
         List<Alteration> alterationList = new ArrayList<>();
         // Only support columns(alteration/name) blur search.
         query = query.toLowerCase().trim();
@@ -1135,12 +1155,13 @@ public final class AlterationUtils {
             return alterationList;
         query = query.trim().toLowerCase();
         for (Alteration alteration : alterations) {
-            if (isMatch(exactMatch, query, alteration.getAlteration())) {
+            // since we are doing string search, we should remove the exclusion clause to prevent the clause been matched
+            if (isMatch(exactMatch, query, removeExclusionCriteria(alteration.getAlteration()))) {
                 alterationList.add(alteration);
                 continue;
             }
 
-            if (isMatch(exactMatch, query, alteration.getName())) {
+            if (isMatch(exactMatch, query, removeExclusionCriteria(alteration.getName()))) {
                 alterationList.add(alteration);
                 continue;
             }
@@ -1214,6 +1235,9 @@ public final class AlterationUtils {
     }
 
     public static List<Alteration> getRelevantAlterations(ReferenceGenome referenceGenome, Alteration alteration) {
+        if (alteration == null) {
+            return new ArrayList<>();
+        }
         Gene gene = alteration.getGene();
         return getRelevantAlterations(referenceGenome, alteration, getAllAlterations(referenceGenome, gene));
     }

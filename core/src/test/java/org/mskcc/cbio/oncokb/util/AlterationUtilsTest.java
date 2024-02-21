@@ -97,7 +97,7 @@ public class AlterationUtilsTest extends TestCase {
     }
 
     public void testGetRelevantAlterationsForExclusion() throws Exception {
-        // Test alteration with exclusion
+        // Test alteration when relevant alt has exclusion
         Gene gene = GeneUtils.getGeneByHugoSymbol("BRAF");
         Alteration v600e = generateAlteration(gene, "V600E");
         Alteration v600k = generateAlteration(gene, "V600K");
@@ -124,7 +124,7 @@ public class AlterationUtilsTest extends TestCase {
         relevantAltsName = AlterationUtils.toString(alterations, true);
         assertEquals("The relevant alterations do not match", "V600, V600 {excluding V600E}, V600E, V600K, V600_V601delinsEB, V600_V601delinsEB {excluding V600E}", relevantAltsName);
 
-        // Test alteration with exclusion
+        // Test alteration when relevant alt has exclusion
         Alteration fusionA = generateAlteration(gene, "AKAP9-BRAF Fusion");
         Alteration fusionB = generateAlteration(gene, "AGAP3-BRAF Fusion");
         Alteration fusionC = generateAlteration(gene, "FAM131B-BRAF Fusion");
@@ -149,7 +149,24 @@ public class AlterationUtilsTest extends TestCase {
         alterations = AlterationUtils.getRelevantAlterations(DEFAULT_REFERENCE_GENOME, fusionC, fullAlteration);
         relevantAltsName = AlterationUtils.toString(alterations);
         assertEquals("The relevant alterations do not match", "FAM131B-BRAF Fusion, Fusions", relevantAltsName);
+    }
 
+    public void testGetRelevantAlterationsWhenAltHasExclusion() throws Exception {
+        Gene gene = GeneUtils.getGeneByHugoSymbol("BRAF");
+        Alteration fusion = generateAlteration(gene, "AKAP9-BRAF Fusion");
+        Alteration fusionsWithExcluding = generateAlteration(gene, "Fusions {excluding AKAP9-BRAF Fusion}");
+
+        List<Alteration> fullAlteration = new ArrayList<>();
+        fullAlteration.add(fusion);
+        fullAlteration.add(fusionsWithExcluding);
+
+        List<Alteration> alterations = AlterationUtils.getRelevantAlterations(DEFAULT_REFERENCE_GENOME, fusion, fullAlteration);
+        String relevantAltsName = AlterationUtils.toString(alterations);
+        assertEquals("The relevant alterations do not match", "AKAP9-BRAF Fusion", relevantAltsName);
+
+        alterations = AlterationUtils.getRelevantAlterations(DEFAULT_REFERENCE_GENOME, fusionsWithExcluding, fullAlteration);
+        relevantAltsName = AlterationUtils.toString(alterations);
+        assertEquals("The relevant alterations do not match", "Fusions {excluding AKAP9-BRAF Fusion}", relevantAltsName);
     }
 
     private Alteration generateAlteration(Gene gene, String proteinChange) {
@@ -454,5 +471,21 @@ public class AlterationUtilsTest extends TestCase {
 
         assertEquals("A1B,B1C[test1,test2]", AlterationUtils.trimComment("A1B(test1,test2),B1C[test1,test2]"));
         assertEquals("A1B,B1C[test1,test2],C1D", AlterationUtils.trimComment("A1B(test1,test2),B1C[test1,test2],C1D(test1,test2)"));
+    }
+
+    public void testHasExclusionCriteria(){
+        assertFalse(AlterationUtils.hasExclusionCriteria(null));
+        assertFalse(AlterationUtils.hasExclusionCriteria(""));
+        assertFalse(AlterationUtils.hasExclusionCriteria("BRAF"));
+        assertFalse(AlterationUtils.hasExclusionCriteria("V600E"));
+
+        assertTrue(AlterationUtils.hasExclusionCriteria("V600 {excluding V600E}"));
+        assertTrue(AlterationUtils.hasExclusionCriteria("V600 {exclude V600E}"));
+        assertTrue(AlterationUtils.hasExclusionCriteria("V600 (excluding V600E)"));
+        assertTrue(AlterationUtils.hasExclusionCriteria("V600 (exclude V600E)"));
+
+        assertTrue(AlterationUtils.hasExclusionCriteria("V600{excluding V600E}"));
+        assertTrue(AlterationUtils.hasExclusionCriteria("V600{excluding V600E} "));
+        assertTrue(AlterationUtils.hasExclusionCriteria("V600{excluding  V600E}"));
     }
 }

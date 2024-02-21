@@ -8,7 +8,6 @@ import org.mskcc.cbio.oncokb.bo.AlterationBo;
 import org.mskcc.cbio.oncokb.bo.ArticleBo;
 import org.mskcc.cbio.oncokb.bo.EvidenceBo;
 import org.mskcc.cbio.oncokb.model.*;
-import org.mskcc.cbio.oncokb.model.TumorType;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.util.*;
@@ -181,7 +180,7 @@ public class EvidenceUtils {
 
         if (query.getGene() != null) {
             genes.add(query.getGene());
-            if (query.getExactMatchedAlteration() == null && query.getAlterations().isEmpty() && query.getAlleles().isEmpty()) {
+            if ((query.getExactMatchedAlteration() != null && query.getExactMatchedAlteration().getAlteration().length() == 0) && query.getAlterations().isEmpty() && query.getAlleles().isEmpty()) {
                 alterations.addAll(AlterationUtils.getAllAlterations(referenceGenome, query.getGene()));
             } else {
                 if (query.getAlterations() != null) {
@@ -366,6 +365,8 @@ public class EvidenceUtils {
                     //Add all gene specific evidences
                     if (evidence.getAlterations().isEmpty()) {
                         filtered.add(evidence);
+                    } else if (evidenceQuery.getExactMatchedAlteration() != null && StringUtils.isEmpty(evidenceQuery.getExactMatchedAlteration().getAlteration())) {
+                        filtered.add(evidence);
                     } else {
                         boolean hasjointed = !Collections.disjoint(evidence.getAlterations(), evidenceQuery.getAlterations());
                         if (!hasjointed) {
@@ -389,6 +390,13 @@ public class EvidenceUtils {
                                 if (hasjointed || com.mysql.jdbc.StringUtils.isNullOrEmpty(evidenceQuery.getQuery().getTumorType())) {
                                     filtered.add(evidence);
                                 } else if (tumorForm != null) {
+                                    // if the cancer type is specifically excluded, it should not even be propagated
+                                    if (evidence.getExcludedCancerTypes().size() > 0) {
+                                        hasjointed = !Collections.disjoint(evidence.getExcludedCancerTypes(), evidenceQuery.getOncoTreeTypes());
+                                        if (hasjointed) {
+                                            continue;
+                                        }
+                                    }
                                     if (evidence.getLevelOfEvidence() != null) {
                                         Evidence propagatedLevel = getPropagateEvidence(evidenceQuery.getLevelOfEvidences(), evidence, tumorForm);
                                         if (propagatedLevel != null) {
@@ -905,7 +913,12 @@ public class EvidenceUtils {
                     }
                 }
                 query.setLevelOfEvidences(levelOfEvidences == null ? null : new ArrayList<>(levelOfEvidences));
-                Set<Evidence> relevantEvidences = getEvidence(requestQuery.getReferenceGenome(), query, evidenceTypes, levelOfEvidences);
+                Set<Evidence> relevantEvidences = new HashSet<>();
+                if (query.getExactMatchedAlteration() != null) {
+                    relevantEvidences = getRelevantEvidences(query.getQuery(), query.getExactMatchedAlteration(), evidenceTypes, levelOfEvidences, AlterationUtils.getRelevantAlterations(requestQuery.getReferenceGenome(), query.getExactMatchedAlteration()), query.getAlleles());
+                } else {
+                    relevantEvidences = getEvidence(requestQuery.getReferenceGenome(), query, evidenceTypes, levelOfEvidences);
+                }
                 query = assignEvidence(relevantEvidences,
                     Collections.singletonList(query), highestLevelOnly).iterator().next();
 

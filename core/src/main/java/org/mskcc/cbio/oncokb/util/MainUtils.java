@@ -1,12 +1,10 @@
 package org.mskcc.cbio.oncokb.util;
 
-import jdk.nashorn.internal.runtime.regexp.joni.Regex;
 import org.mskcc.cbio.oncokb.apiModels.ActionableGene;
 import org.mskcc.cbio.oncokb.apiModels.AnnotatedVariant;
 import org.mskcc.cbio.oncokb.apiModels.Citations;
 import org.mskcc.cbio.oncokb.apiModels.CuratedGene;
 import org.mskcc.cbio.oncokb.model.*;
-import org.mskcc.cbio.oncokb.model.TumorType;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
@@ -31,19 +29,28 @@ public class MainUtils {
             Oncogenicity.RESISTANCE,
             Oncogenicity.LIKELY,
             Oncogenicity.YES
-            )
+        )
     );
     private static final List<MutationEffect> PRIORITIZED_MUTATION_EFFECTS = Collections.unmodifiableList(
         Arrays.asList(MutationEffect.GAIN_OF_FUNCTION,
             MutationEffect.LIKELY_GAIN_OF_FUNCTION,
-            MutationEffect.INCONCLUSIVE,
-            MutationEffect.LIKELY_NEUTRAL,
-            MutationEffect.NEUTRAL,
             MutationEffect.LIKELY_SWITCH_OF_FUNCTION,
             MutationEffect.SWITCH_OF_FUNCTION,
             MutationEffect.LIKELY_LOSS_OF_FUNCTION,
             MutationEffect.LOSS_OF_FUNCTION,
+            MutationEffect.INCONCLUSIVE,
+            MutationEffect.LIKELY_NEUTRAL,
+            MutationEffect.NEUTRAL,
             MutationEffect.UNKNOWN
+        )
+    );
+
+    private static final List<AnnotationSearchQueryType> PRIORITIZED_QUERY_TYPES = Collections.unmodifiableList(
+        Arrays.asList(
+            AnnotationSearchQueryType.GENE,
+            AnnotationSearchQueryType.VARIANT,
+            AnnotationSearchQueryType.CANCER_TYPE,
+            AnnotationSearchQueryType.DRUG
         )
     );
 
@@ -180,17 +187,53 @@ public class MainUtils {
         return indicatorQueryMutationEffect;
     }
 
-    public static IndicatorQueryMutationEffect setToAlternativeAlleleMutationEffect(IndicatorQueryMutationEffect indicatorQueryMutationEffect) {
-        if (indicatorQueryMutationEffect != null && indicatorQueryMutationEffect.getMutationEffect() != null) {
-            MutationEffect mutationEffect = indicatorQueryMutationEffect.getMutationEffect();
-            MutationEffect likeME = MutationEffect.getByName("Likely " + mutationEffect.getMutationEffect().replaceAll("(?i)likely", "").trim());
+    public static Set<Evidence> getMutationEffectFromAlternativeAlleles(Set<Evidence> evidences) {
+        final int DEFAULT_INDEX = 100;
+        int index = DEFAULT_INDEX;
+        Map<MutationEffect, Set<Evidence>> meMap = new HashMap<>();
+        for (Evidence evidence : evidences) {
+            MutationEffect mutationEffect = MutationEffect.getByName(evidence.getKnownEffect());
+            if (mutationEffect == null) {
+                continue;
+            }
+            MutationEffect likelyMutationEffect = getLikelyMutationEffect(mutationEffect);
+            if (likelyMutationEffect != null) {
+                mutationEffect = likelyMutationEffect;
+            }
+            if (!meMap.containsKey(mutationEffect)) {
+                meMap.put(mutationEffect, new HashSet<>());
+            }
+            meMap.get(mutationEffect).add(evidence);
+            int _index = PRIORITIZED_MUTATION_EFFECTS.indexOf(mutationEffect);
+            if (_index >= 0 && _index < index) {
+                index = _index;
+            }
+        }
+        Set<MutationEffect> typesOfMutationEffect = meMap.keySet();
+        typesOfMutationEffect.remove(MutationEffect.UNKNOWN);
+        if (typesOfMutationEffect.size() > 1) {
+            return new HashSet<>();
+        }
+        return index == DEFAULT_INDEX ? new HashSet<>() : meMap.get(PRIORITIZED_MUTATION_EFFECTS.get(index));
+    }
+
+    private static MutationEffect getLikelyMutationEffect(MutationEffect mutationEffect) {
+        if (mutationEffect == null) {
+            return null;
+        }
+        return MutationEffect.getByName("Likely " + mutationEffect.getMutationEffect().replaceAll("(?i)likely", "").trim());
+    }
+
+    public static MutationEffect setToAlternativeAlleleMutationEffect(MutationEffect mutationEffect) {
+        if (mutationEffect != null) {
+            MutationEffect likeME = getLikelyMutationEffect(mutationEffect);
 
             // likeME will be null if mutation effect without related likely mutation effect.
             if (likeME == null || likeME.equals(MutationEffect.LIKELY_NEUTRAL))
-                return new IndicatorQueryMutationEffect();
-            indicatorQueryMutationEffect.setMutationEffect(likeME);
+                return null;
+            return likeME;
         }
-        return indicatorQueryMutationEffect;
+        return null;
     }
 
     public static Oncogenicity findHighestOncogenicity(Set<Oncogenicity> oncogenicitySet) {
@@ -205,6 +248,29 @@ public class MainUtils {
             }
         }
         return index == -1 ? null : PRIORITIZED_ONCOGENICITY.get(index);
+    }
+
+    public static Evidence findHighestOncogenicityEvidence(List<Evidence> oncogenicitySet) {
+        Integer index = -1;
+
+        if (oncogenicitySet.size() == 0) {
+            return null;
+        }
+        oncogenicitySet.sort((e1, e2) -> compareOncogenicity(Oncogenicity.getByEvidence(e1), Oncogenicity.getByEvidence(e2), true));
+        for (Evidence evidence : oncogenicitySet) {
+            if (EvidenceType.ONCOGENIC.equals(evidence.getEvidenceType())) {
+                Oncogenicity oncogenicity = Oncogenicity.getByEvidence(evidence);
+                Integer oncogenicIndex = PRIORITIZED_ONCOGENICITY.indexOf(oncogenicity);
+                if (index < oncogenicIndex) {
+                    index = oncogenicIndex;
+                }
+            }
+        }
+        return oncogenicitySet.get(0);
+    }
+
+    public static boolean manuallyAssignedTruncatingMutation(Query query) {
+        return query.getAlteration().toLowerCase().contains("truncating mutation") && query.getSvType() != null;
     }
 
     public static Integer compareOncogenicity(Oncogenicity o1, Oncogenicity o2, Boolean asc) {
@@ -624,6 +690,9 @@ public class MainUtils {
 
     public static Citations getCitationsByEvidence(Evidence evidence) {
         Citations citations = new Citations();
+        if (evidence.getArticles() == null) {
+            return citations;
+        }
         for (Article article : evidence.getArticles()) {
             if (article.getPmid() != null) {
                 citations.getPmids().add(article.getPmid());
@@ -696,7 +765,7 @@ public class MainUtils {
         });
     }
 
-    public static void sortCuratedGenes(List<CuratedGene> genes){
+    public static void sortCuratedGenes(List<CuratedGene> genes) {
         Collections.sort(genes, new Comparator<CuratedGene>() {
             @Override
             public int compare(CuratedGene g1, CuratedGene g2) {
@@ -707,7 +776,7 @@ public class MainUtils {
 
     public static String replaceLast(String text, String regex, String replacement) {
         // the code is from https://stackoverflow.com/a/2282998
-        return text.replaceFirst("(?s)"+regex+"(?!.*?"+regex+")", replacement);
+        return text.replaceFirst("(?s)" + regex + "(?!.*?" + regex + ")", replacement);
     }
 
     public static boolean rangesIntersect(Integer start1, Integer end1, Integer start2, Integer end2) {
@@ -761,5 +830,33 @@ public class MainUtils {
             sb.append(text);
         }
         return sb.toString();
+    }
+
+    public static <T> LinkedHashSet<T> getLimit(LinkedHashSet<T> result, Integer limit) {
+        final Integer DEFAULT_RETURN_LIMIT = 5;
+        if (limit == null)
+            limit = DEFAULT_RETURN_LIMIT;
+        Integer count = 0;
+        LinkedHashSet<T> firstFew = new LinkedHashSet<>();
+        Iterator<T> itr = result.iterator();
+        while (itr.hasNext() && count < limit) {
+            firstFew.add(itr.next());
+            count++;
+        }
+        return firstFew;
+    }
+
+    public static Integer compareAnnotationSearchQueryType(AnnotationSearchQueryType q1, AnnotationSearchQueryType q2, Boolean asc) {
+        if (asc == null) {
+            asc = true;
+        }
+        if (q1 == null) {
+            if (q2 == null)
+                return 0;
+            return asc ? 1 : -1;
+        }
+        if (q2 == null)
+            return asc ? -1 : 1;
+        return (PRIORITIZED_QUERY_TYPES.indexOf(q2) - PRIORITIZED_QUERY_TYPES.indexOf(q1)) * (asc ? 1 : -1);
     }
 }
